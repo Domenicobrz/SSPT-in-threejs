@@ -160,17 +160,17 @@ function makeSceneShaders(tot_triangles) {
 
         // ************ try screen-space intersection, if we can find something output red ************
             // **** quality params
+                float startingStep = 0.05;
+                float stepMult = 1.25;
+                const int steps = 20;
+                const int binarySteps = 5;
+                const int bounces = 3;
+
                 // float startingStep = 0.05;
-                // float stepMult = 1.25;
-                // const int steps = 20;
+                // float stepMult = 1.12;
+                // const int steps = 40;
                 // const int binarySteps = 5;
                 // const int bounces = 3;
-
-                float startingStep = 0.05;
-                float stepMult = 1.12;
-                const int steps = 40;
-                const int binarySteps = 6;
-                const int bounces = 3;
             // **** quality params - END
 
         vec3 mult = vec3(1.0);

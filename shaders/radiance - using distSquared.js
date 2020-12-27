@@ -160,21 +160,22 @@ function makeSceneShaders(tot_triangles) {
 
         // ************ try screen-space intersection, if we can find something output red ************
             // **** quality params
+                float startingStep = 0.05;
+                float stepMult = 1.25;
+                const int steps = 20;
+                const int binarySteps = 5;
+                const int bounces = 3;
+
                 // float startingStep = 0.05;
-                // float stepMult = 1.25;
-                // const int steps = 20;
+                // float stepMult = 1.12;
+                // const int steps = 40;
                 // const int binarySteps = 5;
                 // const int bounces = 3;
-
-                float startingStep = 0.05;
-                float stepMult = 1.12;
-                const int steps = 40;
-                const int binarySteps = 6;
-                const int bounces = 3;
             // **** quality params - END
 
         vec3 mult = vec3(1.0);
         float maxIntersectionDepthDistance = 0.5;
+        float maxIntersectionDepthDistanceSquared = maxIntersectionDepthDistance * maxIntersectionDepthDistance;
         ro = posBuff;
         rd = sampleDiffuseHemisphere(normBuff, ro);
         mult *= max(dot(rd, normBuff), 0.0);
@@ -194,7 +195,7 @@ function makeSceneShaders(tot_triangles) {
                 vec2 pUv  = pNdc * 0.5 + 0.5;
                 vec3 positionAtPointP = texture2D(uPositionBuffer, pUv).xyz;
                 if(positionAtPointP == vec3(0.0)) positionAtPointP = uCameraPos + viewDir * 9999999.0; 
-                float distanceFromCameraAtP = length(p - uCameraPos);
+                float distanceFromCameraAtP = distSquared(p, uCameraPos);
 
                 // we need to be careful about rays that go "behind" the camera, if they go far enough
                 // they may be treated as intersections!! (also notice how I'm using "w" instead of "viewDir")
@@ -207,7 +208,7 @@ function makeSceneShaders(tot_triangles) {
                     break;
                 }
 
-                float distanceFromCameraAtPosBuff = length(positionAtPointP - uCameraPos);
+                float distanceFromCameraAtPosBuff = distSquared(positionAtPointP, uCameraPos);
                 if(distanceFromCameraAtP > distanceFromCameraAtPosBuff) {
 
                     // intersection found!
@@ -219,8 +220,8 @@ function makeSceneShaders(tot_triangles) {
                     for(int j = 0; j < binarySteps; j++) {
                         vec3 mid = (p1 + p2) * 0.5;
                         vec3 posAtMid = positionBufferAtP(mid, viewDir);
-                        float distanceFromCameraAtMid     = length(mid - uCameraPos);
-                        float distanceFromCameraAtPosBuff = length(posAtMid - uCameraPos);
+                        float distanceFromCameraAtMid     = distSquared(mid, uCameraPos);
+                        float distanceFromCameraAtPosBuff = distSquared(posAtMid, uCameraPos);
 
                         if(distanceFromCameraAtMid > distanceFromCameraAtPosBuff) {
                             p2 = (p1 + p2) * 0.5;
@@ -241,8 +242,8 @@ function makeSceneShaders(tot_triangles) {
 
 
                     // use p2 as the intersection point
-                    float distanceFromCameraAtP2 = length(p2 - uCameraPos);
-                    if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance) {
+                    float distanceFromCameraAtP2 = distSquared(p2, uCameraPos);
+                    if(abs(sqrt(distanceFromCameraAtP2) - sqrt(lastRecordedPosBuffThatIntersected)) < maxIntersectionDepthDistance) {
                         // intersection validated
                         // get normal & material at p2
                         vec4 projP2 = vProjViewModelMatrix * vec4(p2, 1.0);

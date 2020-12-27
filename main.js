@@ -10,6 +10,7 @@ import { momentMove_fs, momentMove_vs } from "./shaders/momentMove.js";
 import { historyTest_fs, historyTest_vs, historyAccum_fs, historyAccum_vs } from "./shaders/history.js";
 import { radianceAccum_fs, radianceAccum_vs } from "./shaders/radianceAccum.js";
 import * as dat from './dependencies/dat.gui.js';
+import Stats from "./dependencies/stats.js";
 
 
 window.addEventListener("load", init);
@@ -52,9 +53,13 @@ let npress;
 let mpress;
 let ipress;
 
-let pixelRatio = 1;
+let pixelRatio = 0.5;
 let pr_width   = Math.floor(innerWidth  * pixelRatio);
 let pr_height  = Math.floor(innerHeight * pixelRatio);
+
+var stats = new Stats();
+stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
+document.body.appendChild( stats.dom );
 
 function init() {
     renderer = new THREE.WebGLRenderer({ antialias: false });
@@ -84,38 +89,40 @@ function init() {
 
     let geom = createGeometry(0);
 
+    let filterMode = THREE.NearestFilter;
+
     positionRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
-        magFilter: THREE.NearestFilter,
-        minFilter: THREE.NearestFilter,
+        magFilter: filterMode,
+        minFilter: filterMode,
         type: THREE.FloatType,
         stencilBuffer: false,
     });
 
     normalRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
-        magFilter: THREE.NearestFilter,
-        minFilter: THREE.NearestFilter,
+        magFilter: filterMode,
+        minFilter: filterMode,
         type: THREE.FloatType,
         stencilBuffer: false,
     });
 
     momentMoveRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
-        magFilter: THREE.NearestFilter,
-        minFilter: THREE.NearestFilter,
+        magFilter: filterMode,
+        minFilter: filterMode,
         type: THREE.FloatType,
         stencilBuffer: false,
     }); 
     
     materialRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
-        magFilter: THREE.NearestFilter,
-        minFilter: THREE.NearestFilter,
+        magFilter: filterMode,
+        minFilter: filterMode,
         type: THREE.FloatType,
         stencilBuffer: false,
     });
 
 
-    atrousRT = createDoubleFBO(pr_width, pr_height, THREE.NearestFilter);
-    historyRT = createTripleFBO(pr_width, pr_height, THREE.NearestFilter);
-    radianceRT = createTripleFBO(pr_width, pr_height, THREE.NearestFilter);
+    atrousRT = createDoubleFBO(pr_width, pr_height, filterMode);
+    historyRT = createTripleFBO(pr_width, pr_height, filterMode);
+    radianceRT = createTripleFBO(pr_width, pr_height, filterMode);
 
 
 
@@ -388,6 +395,9 @@ function createTripleFBO(w, h, filtering) {
 }
 
 function animate(now) {
+    stats.begin();
+
+
     requestAnimationFrame( animate );
 
     now *= 0.001;
@@ -613,6 +623,11 @@ function animate(now) {
 
     renderer.clear();
     renderer.render(displayScene, camera);
+
+
+
+
+	stats.end();
 }
 
 let controller;
@@ -775,7 +790,7 @@ function initGUI() {
 }
 
 
-let addt = 0; // 18;
+let addt = 30; // 18;
 // let tot_triangles = 14 + addt;
 let tot_triangles = 14 + addt;
 makeSceneShaders(tot_triangles);
@@ -853,13 +868,13 @@ function createGeometry(time) {
         +5, -5, +5, 0,
 
         // light source, will be back-culled
-        +3.85 * lssm - 2, -2.5 + 2 /*+4.9*/, -3.85 * lssm, 14,
-        -3.85 * lssm - 2, +0.9 + 2 /*+4.9*/, +3.85 * lssm, 14,
-        -3.85 * lssm - 2, -2.5 + 2 /*+4.9*/, -3.85 * lssm, 14,
+        +3.85 * lssm - 2, -2.5 + 4 /*+4.9*/, -3.85 * lssm, 14,
+        -3.85 * lssm - 2, +0.9 + 4 /*+4.9*/, +3.85 * lssm, 14,
+        -3.85 * lssm - 2, -2.5 + 4 /*+4.9*/, -3.85 * lssm, 14,
         
-        +3.85 * lssm + 2, +0.9 + 2 /*+4.9*/, +3.85 * lssm, 15,
-        -3.85 * lssm + 2, +0.9 + 2 /*+4.9*/, +3.85 * lssm, 15,
-        +3.85 * lssm + 2, -2.5 + 2 /*+4.9*/, -3.85 * lssm, 15,
+        +3.85 * lssm + 2, +0.9 + 4 /*+4.9*/, +3.85 * lssm, 15,
+        -3.85 * lssm + 2, +0.9 + 4 /*+4.9*/, +3.85 * lssm, 15,
+        +3.85 * lssm + 2, -2.5 + 4 /*+4.9*/, -3.85 * lssm, 15,
     ];
 
 
