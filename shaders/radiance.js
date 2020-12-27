@@ -14,8 +14,6 @@ function makeSceneShaders(tot_triangles) {
     `;
 
     window.radiance_fs = `
-    uniform vec4 uScene[${tot_triangles * 3}];
-
     uniform vec3  uCameraPos;
     uniform vec3  uCameraTarget;
     uniform float uAspectRatio;

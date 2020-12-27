@@ -158,8 +158,6 @@ function init() {
 
     radianceBufferMaterial = new THREE.ShaderMaterial({
         uniforms: {
-            "uScene":    { value: geom.uniform },
-
             "uRadMult":    { value: 1 },
             "uCameraPos":    { value: camera.position },
             "uCameraTarget": { value: controls.target },
@@ -420,8 +418,6 @@ function animate(now) {
     let oldgeometry = mesh.geometry;
     mesh.geometry = newgeo.geometry;
     mesh.geometryCULL = newgeo.geometryCULL;
-    radianceBufferMaterial.uniforms.uScene.value = newgeo.uniform;
-    radianceBufferMaterial.uniforms.uScene.needsUpdate = true;
     radianceBufferMaterial.uniforms.needsUpdate = true;
     radianceBufferMaterial.needsUpdate = true;
 
@@ -1020,16 +1016,7 @@ function createGeometry(time) {
 
 
 
-    let uniformGeometry = [];
-    for(let i = 0; i < verticesCULL.length; i+=4) {
-        uniformGeometry.push(new THREE.Vector4(verticesCULL[i], verticesCULL[i+1], verticesCULL[i+2], verticesCULL[i+3]));
-    } 
-    for(let i = 0; i < vertices.length; i+=4) {
-        uniformGeometry.push(new THREE.Vector4(vertices[i], vertices[i+1], vertices[i+2], vertices[i+3]));
-    }
-
     return {
-        uniform: uniformGeometry,
         geometryCULL: geometryCULL,
         geometry: geometry
     };
