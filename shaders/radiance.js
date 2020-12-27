@@ -226,7 +226,8 @@ function makeSceneShaders(tot_triangles) {
 
         for(int i = 0; i < 40; i++) {
             vec3 initialP = p;
-            p += rd * step;
+            // jittered step increase, can probably use a much better solution
+            p += rd * (step * 0.75 + rand(p) * 0.25);
             step *= stepMult;
 
             vec4 projP = vProjViewModelMatrix * vec4(p, 1.0);
@@ -235,7 +236,7 @@ function makeSceneShaders(tot_triangles) {
             vec3 positionAtPointP = texture2D(uPositionBuffer, pUv).xyz;
             if(positionAtPointP == vec3(0.0)) positionAtPointP = uCameraPos + viewDir * 9999999.0; 
             vec3 normalAtPointP   = texture2D(uPositionBuffer, pUv).xyz;
-            float distanceFromCameraAtP       = length(p - uCameraPos);
+            float distanceFromCameraAtP = length(p - uCameraPos);
             
             // we need to be careful about rays that go "behind" the camera, if they go far enough
             // they may be treated as intersections!! (also notice how I'm using "w" instead of "viewDir")
