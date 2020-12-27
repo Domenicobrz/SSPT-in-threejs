@@ -196,7 +196,7 @@ function makeSceneShaders(tot_triangles) {
         vec3 posBuff  = texture2D(uPositionBuffer, vUv).xyz;
         vec3 normBuff = texture2D(uNormalBuffer, vUv).xyz;
         vec3 matBuff  = texture2D(uMaterialBuffer, vUv).xyz;
-        if(dot(rd, normBuff) > 0.0) normBuff = -normBuff;
+        if(dot(viewDir, normBuff) > 0.0) normBuff = -normBuff;
 
         // why posBuff minus rd ?
         // remember: the wall's front-faces are culled!
@@ -231,120 +231,103 @@ function makeSceneShaders(tot_triangles) {
 
         // ************ try screen-space intersection, if we can find something output red ************
             // **** quality params
-                float startingStep = 0.05;
+                float step = 0.05;
                 float stepMult = 1.25;
                 const int steps = 20;
                 const int binarySteps = 5;
-                const int bounces = 2;
             // **** quality params - END
 
-        vec3 mult = vec3(1.0);
-        bool noIntersection = false;
         float maxIntersectionDepthDistance = 0.5;
         ro = posBuff;
         rd = sampleDiffuseHemisphere(normBuff, ro);
-        mult *= max(dot(rd, normBuff), 0.0);
+        vec3 mult = vec3(1.0) * max(dot(rd, normBuff), 0.0);
+        vec3 p = ro;
 
-        for(int b = 0; b < bounces; b++) {
-            vec3 p = ro;
-            float step = startingStep;
+        for(int i = 0; i < steps; i++) {
+            vec3 initialP = p;
+            // jittered step increase, can probably use a much better solution
+            p += rd * (step * 0.75 + rand(p) * 0.25);
+            step *= stepMult;
 
-            for(int i = 0; i < steps; i++) {
-                vec3 initialP = p;
-                // jittered step increase, can probably use a much better solution
-                p += rd * (step * 0.75 + rand(p) * 0.25);
-                step *= stepMult;
-
-                vec4 projP = vProjViewModelMatrix * vec4(p, 1.0);
-                vec2 pNdc = (projP / projP.w).xy;
-                vec2 pUv  = pNdc * 0.5 + 0.5;
-                vec3 positionAtPointP = texture2D(uPositionBuffer, pUv).xyz;
-                if(positionAtPointP == vec3(0.0)) positionAtPointP = uCameraPos + viewDir * 9999999.0; 
-                vec3 normalAtPointP   = texture2D(uPositionBuffer, pUv).xyz;
-                float distanceFromCameraAtP = length(p - uCameraPos);
-
-                // we need to be careful about rays that go "behind" the camera, if they go far enough
-                // they may be treated as intersections!! (also notice how I'm using "w" instead of "viewDir")
-                // this issue will eventually be entirely resolved by using depthBuffers
-                if(dot(normalize(p - uCameraPos), w) < 0.0) {
-                    break;
-                }
-                // out of screen bounds condition
-                if(pUv.x < 0.0 || pUv.x > 1.0 || pUv.y < 0.0 || pUv.y > 1.0) {
-                    break;
-                }
-
-                float distanceFromCameraAtPosBuff = length(positionAtPointP - uCameraPos);
-                if(distanceFromCameraAtP > distanceFromCameraAtPosBuff) {
-
-                    // intersection found!
-
-                    // ******** binary search start *********
-                    vec3 p1 = initialP;
-                    vec3 p2 = p;
-                    float lastRecordedPosBuffThatIntersected;
-                    for(int j = 0; j < binarySteps; j++) {
-                        vec3 mid = (p1 + p2) * 0.5;
-                        vec3 posAtMid = positionBufferAtP(mid, viewDir);
-                        float distanceFromCameraAtMid     = length(mid - uCameraPos);
-                        float distanceFromCameraAtPosBuff = length(posAtMid - uCameraPos);
-
-                        if(distanceFromCameraAtMid > distanceFromCameraAtPosBuff) {
-                            p2 = (p1 + p2) * 0.5;
-
-                            // we need to save this value inside this if otherwise if it was outside and above this
-                            // if statement, it would be possible that it's value would be very large (e.g. if p1 intersected the "background"
-                            // since in that case positionBufferAtP() returns viewDir * 99999999.0)
-                            // and if that value is very large, it can create artifacts when evaluating this condition:
-                            // ---> if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance) 
-                            // to be honest though, these artifacts only appear for largerish values of maxIntersectionDepthDistance
-
-                            lastRecordedPosBuffThatIntersected = distanceFromCameraAtPosBuff;
-                        } else {
-                            p1 = (p1 + p2) * 0.5;
-                        }
-                    }
-                    // ******** binary search end   *********
-
-
-                    // use p2 as the intersection point
-                    float distanceFromCameraAtP2 = length(p2 - uCameraPos);
-                    if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance) {
-                        // intersection validated
-                        // get normal & material at p2
-                        vec4 projP2 = vProjViewModelMatrix * vec4(p2, 1.0);
-                        vec2 p2Uv = (projP2 / projP2.w).xy * 0.5 + 0.5;
-                        vec4 imaterial = texture2D(uMaterialBuffer, p2Uv);
-                        vec3 inormal   = texture2D(uNormalBuffer, p2Uv).xyz;
-                        if(dot(inormal, rd) > 0.0) inormal = -inormal;
-
-                        if(imaterial.x > 14.5) {
-                            radiance += vec3(1.0, 6.0, 1.0) * mult;
-                        } else if (imaterial.x > 13.5) {
-                            radiance += vec3(6.0, 1.0, 1.0) * mult;
-                        }
-
-                        ro = p1;
-                        rd = sampleDiffuseHemisphere(inormal, ro);
-                        ro = ro + rd * 0.95;
-                        mult *= max(dot(rd, inormal), 0.0);
-
-                    } else {
-                        // intersection is invalid
-                        // gl_FragColor = vec4(0.0, 1.0, 0.5, 1.0);
-                        // return;
-
-                        noIntersection = true;
-                    }
-
-                    break;
-                }
+            vec4 projP = vProjViewModelMatrix * vec4(p, 1.0);
+            vec2 pNdc = (projP / projP.w).xy;
+            vec2 pUv  = pNdc * 0.5 + 0.5;
+            vec3 positionAtPointP = texture2D(uPositionBuffer, pUv).xyz;
+            if(positionAtPointP == vec3(0.0)) positionAtPointP = uCameraPos + viewDir * 9999999.0; 
+            vec3 normalAtPointP   = texture2D(uPositionBuffer, pUv).xyz;
+            float distanceFromCameraAtP = length(p - uCameraPos);
+            
+            // we need to be careful about rays that go "behind" the camera, if they go far enough
+            // they may be treated as intersections!! (also notice how I'm using "w" instead of "viewDir")
+            // this issue will eventually be entirely resolved by using depthBuffers
+            if(dot(normalize(p - uCameraPos), w) < 0.0) {
+                break;
             }
-        }
+            // out of screen bounds condition
+            if(pUv.x < 0.0 || pUv.x > 1.0 || pUv.y < 0.0 || pUv.y > 1.0) {
+                break;
+            }
 
-        if(noIntersection) {
-            gl_FragColor = vec4(vec3(0.0), 1.0);
-            return;
+            float distanceFromCameraAtPosBuff = length(positionAtPointP - uCameraPos);
+            if(distanceFromCameraAtP > distanceFromCameraAtPosBuff) {
+
+                // intersection found!
+
+                // ******** binary search start *********
+                vec3 p1 = initialP;
+                vec3 p2 = p;
+                float lastRecordedPosBuffThatIntersected;
+                for(int j = 0; j < binarySteps; j++) {
+                    vec3 mid = (p1 + p2) * 0.5;
+                    vec3 posAtMid = positionBufferAtP(mid, viewDir);
+                    float distanceFromCameraAtMid     = length(mid - uCameraPos);
+                    float distanceFromCameraAtPosBuff = length(posAtMid - uCameraPos);
+
+                    if(distanceFromCameraAtMid > distanceFromCameraAtPosBuff) {
+                        p2 = (p1 + p2) * 0.5;
+                        
+                        // we need to save this value inside this if otherwise if it was outside and above this
+                        // if statement, it would be possible that it's value would be very large (e.g. if p1 intersected the "background"
+                        // since in that case positionBufferAtP() returns viewDir * 99999999.0)
+                        // and if that value is very large, it can create artifacts when evaluating this condition:
+                        // ---> if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance) 
+                        // to be honest though, these artifacts only appear for largerish values of maxIntersectionDepthDistance
+
+                        lastRecordedPosBuffThatIntersected = distanceFromCameraAtPosBuff;
+                    } else {
+                        p1 = (p1 + p2) * 0.5;
+                    }
+                }
+                // ******** binary search end   *********
+
+
+                // use p2 as the intersection point
+                float distanceFromCameraAtP2 = length(p2 - uCameraPos);
+                if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance) {
+                    // intersection validated
+                    // get normal & material at p2
+                    vec4 projP2 = vProjViewModelMatrix * vec4(p2, 1.0);
+                    vec2 p2Uv = (projP2 / projP2.w).xy * 0.5 + 0.5;
+                    vec4 imaterial = texture2D(uMaterialBuffer, p2Uv);
+                    vec3 inormal   = texture2D(uNormalBuffer, p2Uv).xyz;
+                    if(dot(inormal, viewDir) > 0.0) inormal = -inormal;
+
+                    if(imaterial.x > 14.5) {
+                        radiance += vec3(1.0, 6.0, 1.0) * mult;
+                    } else if (imaterial.x > 13.5) {
+                        radiance += vec3(6.0, 1.0, 1.0) * mult;
+                    }
+
+                    gl_FragColor = vec4(radiance, 1.0);
+                    return;
+                } else {
+                    // intersection is invalid
+                    // gl_FragColor = vec4(0.0, 1.0, 0.5, 1.0);
+                    // return;
+                }
+
+                break;
+            }
         }
 
         gl_FragColor = vec4(radiance * uRadMult, 1.0);

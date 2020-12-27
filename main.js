@@ -163,7 +163,7 @@ function init() {
             "uMirrorIndex": { value: 1 },
 
             "uPositionBuffer": { type: "t", value: positionRT.texture },
-            "uNormalBuffer": { type: "t", value: normalRT.texture },
+            "uNormalBuffer":   { type: "t", value: normalRT.texture },
             "uMaterialBuffer": { type: "t", value: materialRT.texture },
         },
         transparent: true,
@@ -775,9 +775,9 @@ function initGUI() {
 }
 
 
-let addt = 1; // 18;
+let addt = 0; // 18;
 // let tot_triangles = 14 + addt;
-let tot_triangles = 4 + addt;
+let tot_triangles = 14 + addt;
 makeSceneShaders(tot_triangles);
 // let addt = 0;
 let randBuffer = [];
@@ -803,21 +803,21 @@ function createGeometry(time) {
     // create a simple square shape. We duplicate the top left and bottom right
     // vertices because each vertex needs to appear once per triangle.
     var verticesCULL = [
-        // -5, -5, -5, 1,
-        // -5, +5, -5, 1,
-        // -5, -5, +5, 1,
+        -5, -5, -5, 1,
+        -5, +5, -5, 1,
+        -5, -5, +5, 1,
 
-        // -5, +5, +5, 1,
-        // -5, -5, +5, 1,
-        // -5, +5, -5, 1,
+        -5, +5, +5, 1,
+        -5, -5, +5, 1,
+        -5, +5, -5, 1,
 
-        // +5, -5, +5, 2,
-        // +5, +5, -5, 2,
-        // +5, -5, -5, 2,
+        +5, -5, +5, 2,
+        +5, +5, -5, 2,
+        +5, -5, -5, 2,
 
-        // +5, +5, +5, 2,
-        // +5, +5, -5, 2,
-        // +5, -5, +5, 2,
+        +5, +5, +5, 2,
+        +5, +5, -5, 2,
+        +5, -5, +5, 2,
 
 
         +5, -5, -5, 0,
@@ -828,38 +828,38 @@ function createGeometry(time) {
         +5, -5, -5, 0,
         -5, -5, +5, 0,
 
-        // +5, +5, -5, 0,
-        // -5, +5, +5, 0,
-        // -5, +5, -5, 0,
-        
-        // +5, +5, +5, 0,
-        // -5, +5, +5, 0,
-        // +5, +5, -5, 0,
+        +5, +5, -5, 0,
+        -5, +5, +5, 0,
+        -5, +5, -5, 0,
+    
+        +5, +5, +5, 0,
+        -5, +5, +5, 0,
+        +5, +5, -5, 0,
 
-        // +5, -5, -5, 3,
-        // -5, +5, -5, 3,
-        // -5, -5, -5, 3,
+        +5, -5, -5, 3,
+        -5, +5, -5, 3,
+        -5, -5, -5, 3,
 
-        // -5, +5, -5, 3,
-        // +5, -5, -5, 3,
-        // +5, +5, -5, 3,
+        -5, +5, -5, 3,
+        +5, -5, -5, 3,
+        +5, +5, -5, 3,
 
-        // +5, -5, +5, 0,
-        // -5, -5, +5, 0,
-        // -5, +5, +5, 0,
+        +5, -5, +5, 0,
+        -5, -5, +5, 0,
+        -5, +5, +5, 0,
 
-        // -5, +5, +5, 0,
-        // +5, +5, +5, 0,
-        // +5, -5, +5, 0,
+        -5, +5, +5, 0,
+        +5, +5, +5, 0,
+        +5, -5, +5, 0,
 
         // light source, will be back-culled
-        +3.85 * lssm, /*-2.5*/ +4.9, -3.85 * lssm, 15,
-        -3.85 * lssm, /*+0.9*/ +4.9, +3.85 * lssm, 15,
-        -3.85 * lssm, /*-2.5*/ +4.9, -3.85 * lssm, 15,
+        +3.85 * lssm - 2, -2.5 + 2 /*+4.9*/, -3.85 * lssm, 14,
+        -3.85 * lssm - 2, +0.9 + 2 /*+4.9*/, +3.85 * lssm, 14,
+        -3.85 * lssm - 2, -2.5 + 2 /*+4.9*/, -3.85 * lssm, 14,
         
-        +3.85 * lssm, /*+0.9*/ +4.9, +3.85 * lssm, 15,
-        -3.85 * lssm, /*+0.9*/ +4.9, +3.85 * lssm, 15,
-        +3.85 * lssm, /*-2.5*/ +4.9, -3.85 * lssm, 15,
+        +3.85 * lssm + 2, +0.9 + 2 /*+4.9*/, +3.85 * lssm, 15,
+        -3.85 * lssm + 2, +0.9 + 2 /*+4.9*/, +3.85 * lssm, 15,
+        +3.85 * lssm + 2, -2.5 + 2 /*+4.9*/, -3.85 * lssm, 15,
     ];
 
 
@@ -875,7 +875,7 @@ function createGeometry(time) {
 
     var normalsCULL = [];
     for(let i = 0; i < threeVerticesCULL.length; i+=9) {
-        let v1 = new THREE.Vector3(threeVerticesCULL[i],   threeVerticesCULL[i+1], threeVerticesCULL[i+2]);
+        let v1 = new THREE.Vector3(threeVerticesCULL[i+0], threeVerticesCULL[i+1], threeVerticesCULL[i+2]);
         let v2 = new THREE.Vector3(threeVerticesCULL[i+3], threeVerticesCULL[i+4], threeVerticesCULL[i+5]);
         let v3 = new THREE.Vector3(threeVerticesCULL[i+6], threeVerticesCULL[i+7], threeVerticesCULL[i+8]);
 
@@ -938,9 +938,9 @@ function createGeometry(time) {
         let sinYOff3 = Math.sin(time + randBuffer[i*12 + 9] * 149.8776);
 
         // disable animated y offsets
-        sinYOff1 = 0;
-        sinYOff2 = 0;
-        sinYOff3 = 0;
+        // sinYOff1 = 0;
+        // sinYOff2 = 0;
+        // sinYOff3 = 0;
 
         vertices.push(randBuffer[i*12 + 0] * scale + randBufferTransl[i * 3 + 0] * transScale);
         vertices.push(randBuffer[i*12 + 1] * scale + randBufferTransl[i * 3 + 1] * transScale + yOffs + sinYOff1);
