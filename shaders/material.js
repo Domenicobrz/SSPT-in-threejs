@@ -6,7 +6,7 @@ varying vec4 vMaterial;
 void main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
-    vMaterial = aMaterial;
+    vMaterial = aMaterial.wwww;
 }
 `;
 

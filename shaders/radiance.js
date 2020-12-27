@@ -26,6 +26,7 @@ function makeSceneShaders(tot_triangles) {
 
     uniform sampler2D uPositionBuffer;
     uniform sampler2D uNormalBuffer;
+    uniform sampler2D uMaterialBuffer;
 
     varying vec2 vUv;
     varying mat4 vProjViewModelMatrix;
@@ -206,15 +207,6 @@ function makeSceneShaders(tot_triangles) {
             gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
             return;
         }
-
-
-
-
-
-
-
-
-
 
         // ************ try screen-space intersection, if we can find something output red ************
         float step = 0.1;

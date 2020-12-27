@@ -50,6 +50,7 @@ let opress;
 let ppress;
 let npress;
 let mpress;
+let ipress;
 
 let pixelRatio = 1;
 let pr_width   = Math.floor(innerWidth  * pixelRatio);
@@ -163,6 +164,7 @@ function init() {
 
             "uPositionBuffer": { type: "t", value: positionRT.texture },
             "uNormalBuffer": { type: "t", value: normalRT.texture },
+            "uMaterialBuffer": { type: "t", value: materialRT.texture },
         },
         transparent: true,
         blending: THREE.CustomBlending,
@@ -282,6 +284,7 @@ function init() {
         if(e.key == "o") opress = true;
         if(e.key == "m") mpress = true;
         if(e.key == "n") npress = true;
+        if(e.key == "i") ipress = true;
         
     });
     window.addEventListener("keyup", (e) => {
@@ -291,6 +294,7 @@ function init() {
         if(e.key == "o") opress = false;
         if(e.key == "m") mpress = false;
         if(e.key == "n") npress = false;
+        if(e.key == "i") ipress = false;
     });
 
 
@@ -605,6 +609,7 @@ function animate(now) {
     if(ppress) displayQuadMesh.material.uniforms.uTexture.value = historyRT.rt3.texture;
     if(npress) displayQuadMesh.material.uniforms.uTexture.value = momentMoveRT.texture;
     if(mpress) displayQuadMesh.material.uniforms.uTexture.value = radianceRT.rt1.texture;
+    if(ipress) displayQuadMesh.material.uniforms.uTexture.value = materialRT.texture;
 
     renderer.clear();
     renderer.render(displayScene, camera);
