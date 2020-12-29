@@ -9,6 +9,7 @@ import { atrous_fs, atrous_vs } from "./shaders/atrous.js";
 import { momentMove_fs, momentMove_vs } from "./shaders/momentMove.js";
 import { historyTest_fs, historyTest_vs, historyAccum_fs, historyAccum_vs } from "./shaders/history.js";
 import { radianceAccum_fs, radianceAccum_vs } from "./shaders/radianceAccum.js";
+import { standardMaterial_fs, standardMaterial_vs } from "./shaders/standardMaterial.js";
 import * as dat from './dependencies/dat.gui.js';
 import Stats from "./dependencies/stats.js";
 
@@ -26,11 +27,11 @@ let HDRtexture;
 
 let positionRT;
 let normalRT;
+let emissionRT;
 let radianceRT;
 let atrousRT;
 let momentMoveRT;
 let historyRT;
-let materialRT;
 
 let positionBufferMaterial;
 let materialBufferMaterial;
@@ -61,6 +62,9 @@ var stats = new Stats();
 stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 document.body.appendChild( stats.dom );
 
+let culledScene;
+let nonCulledScene;
+
 function init() {
     renderer = new THREE.WebGLRenderer({ antialias: false });
     renderer.setSize( window.innerWidth, window.innerHeight );
@@ -72,6 +76,8 @@ function init() {
     document.body.appendChild( renderer.domElement );
 
     scene = new THREE.Scene();
+    culledScene = new THREE.Scene();
+    nonCulledScene = new THREE.Scene();
     displayScene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
 
@@ -87,7 +93,6 @@ function init() {
     controls.target.set( 0, 0, 0 );
     controls.update();
 
-    let geom = createGeometry(0);
 
     let filterMode = THREE.NearestFilter;
 
@@ -105,6 +110,13 @@ function init() {
         stencilBuffer: false,
     });
 
+    emissionRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
+        magFilter: filterMode,
+        minFilter: filterMode,
+        type: THREE.FloatType,
+        stencilBuffer: false,
+    });
+
     momentMoveRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
         magFilter: filterMode,
         minFilter: filterMode,
@@ -112,13 +124,6 @@ function init() {
         stencilBuffer: false,
     }); 
     
-    materialRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
-        magFilter: filterMode,
-        minFilter: filterMode,
-        type: THREE.FloatType,
-        stencilBuffer: false,
-    });
-
 
     atrousRT = createDoubleFBO(pr_width, pr_height, filterMode);
     historyRT = createTripleFBO(pr_width, pr_height, filterMode);
@@ -138,12 +143,6 @@ function init() {
         },
         fragmentShader: normal_fs,
         vertexShader: normal_vs,
-        side: THREE.DoubleSide,
-    });
-
-    materialBufferMaterial = new THREE.ShaderMaterial({
-        fragmentShader: material_fs,
-        vertexShader: material_vs,
         side: THREE.DoubleSide,
     });
 
@@ -169,7 +168,7 @@ function init() {
 
             "uPositionBuffer": { type: "t", value: positionRT.texture },
             "uNormalBuffer":   { type: "t", value: normalRT.texture },
-            "uMaterialBuffer": { type: "t", value: materialRT.texture },
+            "uEmissionBuffer": { type: "t", value: emissionRT.texture },
         },
         transparent: true,
         blending: THREE.CustomBlending,
@@ -190,7 +189,6 @@ function init() {
             "uRadiance": { type: "t", value: radianceRT.rt3.texture },
             "uNormal":   { type: "t",   value: normalRT.texture   },
             "uPosition": { type: "t", value: positionRT.texture },
-            "uMaterial": { type: "t", value: materialRT.texture },
             "uHistoryAccum": { type: "t", value: historyRT.rt3.texture },
             "uFilterHistoryModulation": { value: 0 },
             "uMaxFramesHistory": { value: 0 },
@@ -255,30 +253,54 @@ function init() {
 
 
 
+
+    let emissiveCulledTestMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            "uEmissive": { value: new THREE.Vector3(5, 0.5, 0.5) },
+            "uColor": { value: new THREE.Vector3(1,1,1) },
+            "uStep": { value: 0 },
+        },
+        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+    });
+
+    let emissiveCulledTestMaterial2 = new THREE.ShaderMaterial({
+        uniforms: {
+            "uEmissive": { value: new THREE.Vector3(0.5, 0.5,5) },
+            "uColor": { value: new THREE.Vector3(1,1,1) },
+            "uStep": { value: 0 },
+        },
+        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+    });
+
+    let culledTestMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            "uEmissive": { value: new THREE.Vector3(0,0,0) },
+            "uColor": { value: new THREE.Vector3(1,1,1) },
+            "uStep": { value: 0 },
+        },
+        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+    });
     
+    let testMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            "uEmissive": { value: new THREE.Vector3(0,0,0) },
+            "uColor": { value: new THREE.Vector3(1,1,1) },
+            "uStep": { value: 0 },
+        },
+        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
+    });
+    
+    let cornellBoxMesh  = new THREE.Mesh(new THREE.BoxBufferGeometry(10, 10, 10), culledTestMaterial);
+    let testBox         = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), culledTestMaterial);
+    let lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveCulledTestMaterial);
+    let lightBoxMesh2   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveCulledTestMaterial2);
+    lightBoxMesh1.position.set(+3, +3, 0);
+    lightBoxMesh2.position.set(-3, -3, 0);
+
+    // culledScene.add(cornellBoxMesh, testBox, lightBoxMesh1, lightBoxMesh2);
+    culledScene.add(cornellBoxMesh, lightBoxMesh1, lightBoxMesh2);
 
 
-    // pmremGenerator = new THREE.PMREMGenerator( renderer, "1.44" );
-    // // pmremGenerator.compileEquirectangularShader();
-
-
-    // let hdrEquiTexture;
-    // new RGBELoader()
-    // .setDataType( THREE.UnsignedByteType ) // alt: FloatType, HalfFloatType
-    // .load( "envmaps/env.hdr", function ( texture, textureData ) {    
-
-    //     HDRtexture = texture;
-    //     // hdrEquiTexture = texture;
-    //     hdrCubeRenderTarget = pmremGenerator.fromEquirectangular( texture ); 
-
-    //     onDownload();
-    // });
-
-    var material = new THREE.MeshBasicMaterial( { color: 0xffffff } );
-    mesh = new THREE.Mesh( geom.geometry, material );
-    mesh.geometryCULL = geom.geometryCULL;
-
-    scene.add(mesh);
 
 
 
@@ -413,12 +435,6 @@ function animate(now) {
 
 
 
-    let newgeo = createGeometry(now);
-    mesh.geometry = newgeo.geometry;
-    mesh.geometryCULL = newgeo.geometryCULL;
-    radianceBufferMaterial.uniforms.needsUpdate = true;
-    radianceBufferMaterial.needsUpdate = true;
-
 
 
     // we need to create moment buffers BEFORE we update normal/position RTs
@@ -430,19 +446,27 @@ function animate(now) {
     momentBufferMaterial.uniforms.uOldModelViewMatrix.needsUpdate = true;
     momentBufferMaterial.uniforms.needsUpdate = true;
     momentBufferMaterial.needsUpdate = true;
-    momentBufferMaterial.side = THREE.FrontSide;
-    renderer.setRenderTarget(momentMoveRT);
-    mesh.material = momentBufferMaterial;
-    renderer.clear();
-    mesh.geometry = newgeo.geometryCULL;
-    renderer.render( scene, camera );
+    momentBufferMaterial.side = THREE.BackSide;
+
+    for(let i = 0; i < culledScene.children.length; i++) {
+        culledScene.children[i].savedMaterial = culledScene.children[i].material;
+        culledScene.children[i].material = momentBufferMaterial;
+    }
 
     renderer.setRenderTarget(momentMoveRT);
-    mesh.geometry = newgeo.geometry;
-    momentBufferMaterial.side = THREE.DoubleSide;
-    renderer.render( scene, camera );
-    // reassign the new geometry after we're done here...
-    mesh.geometry = newgeo.geometry;
+    renderer.clear();
+    renderer.render( culledScene, camera );
+
+    for(let i = 0; i < culledScene.children.length; i++) {
+        culledScene.children[i].material = culledScene.children[i].savedMaterial;
+    }
+
+    // renderer.setRenderTarget(momentMoveRT);
+    // mesh.geometry = newgeo.geometry;
+    // momentBufferMaterial.side = THREE.DoubleSide;
+    // renderer.render( nonCulledScene, camera );
+    // // reassign the new geometry after we're done here...
+    // mesh.geometry = newgeo.geometry;
     // **************** create moment buffers - END
 
 
@@ -452,18 +476,29 @@ function animate(now) {
     //          uniform sampler2D uPositionBuffer;
     // of the previous frames
     // on rt1 we add the success vs unsuccess buffer (either +1 or -1)
-    renderer.setRenderTarget(historyRT.rt1);
-    renderer.clear();
-    mesh.material = historyTestMaterial;
-    mesh.geometry = newgeo.geometryCULL;
     historyTestMaterial.uniforms.uCameraPos.value = camera.position;
-    historyTestMaterial.side = THREE.FrontSide;
-    renderer.render( scene, camera );
+    historyTestMaterial.side = THREE.BackSide;
+    
+    for(let i = 0; i < culledScene.children.length; i++) {
+        culledScene.children[i].savedMaterial = culledScene.children[i].material;
+        culledScene.children[i].material = historyTestMaterial;
+    }
 
     renderer.setRenderTarget(historyRT.rt1);
-    historyTestMaterial.side = THREE.DoubleSide;
-    mesh.geometry = newgeo.geometry;
-    renderer.render( scene, camera );
+    renderer.clear();
+    renderer.render( culledScene, camera );
+
+    for(let i = 0; i < culledScene.children.length; i++) {
+        culledScene.children[i].material = culledScene.children[i].savedMaterial;
+    }
+
+    // renderer.setRenderTarget(historyRT.rt1);
+    // historyTestMaterial.side = THREE.DoubleSide;
+    // mesh.geometry = newgeo.geometry;
+    // renderer.render( nonCulledScene, camera );
+
+
+
 
 
 
@@ -482,46 +517,76 @@ function animate(now) {
 
 
     // **************** creating buffers
-    renderer.setRenderTarget(positionRT);
-    mesh.material = positionBufferMaterial;
-    positionBufferMaterial.side = THREE.FrontSide;
-    mesh.geometry = newgeo.geometryCULL;
-    renderer.clear();
-    renderer.render( scene, camera );
+    positionBufferMaterial.side = THREE.BackSide;
+
+    for(let i = 0; i < culledScene.children.length; i++) {
+        culledScene.children[i].savedMaterial = culledScene.children[i].material;
+        culledScene.children[i].material = positionBufferMaterial;
+    }
 
     renderer.setRenderTarget(positionRT);
-    positionBufferMaterial.side = THREE.DoubleSide;
-    mesh.geometry = newgeo.geometry;
-    renderer.render( scene, camera );
-
-
-
-    renderer.setRenderTarget(materialRT);
-    mesh.material = materialBufferMaterial;
-    mesh.material.side = THREE.FrontSide;
-    mesh.geometry = newgeo.geometryCULL;
     renderer.clear();
-    renderer.render( scene, camera );
+    renderer.render( culledScene, camera );
 
-    renderer.setRenderTarget(materialRT);
-    mesh.material.side = THREE.DoubleSide;
-    mesh.geometry = newgeo.geometry;
-    renderer.render( scene, camera );
+    for(let i = 0; i < culledScene.children.length; i++) {
+        culledScene.children[i].material = culledScene.children[i].savedMaterial;
+    }
+
+    // renderer.setRenderTarget(positionRT);
+    // positionBufferMaterial.side = THREE.DoubleSide;
+    // mesh.geometry = newgeo.geometry;
+    // renderer.render( nonCulledScene, camera );
 
 
 
-    renderer.setRenderTarget(normalRT);
-    mesh.material = normalBufferMaterial;
-    mesh.material.side = THREE.FrontSide;
-    mesh.geometry = newgeo.geometryCULL;
+
+
+    // at this point all meshes have their material-materials assigned
+    // ******* creating emission buffer ********
+    for(let i = 0; i < culledScene.children.length; i++) {
+        culledScene.children[i].material.uniforms.uStep = 0;
+    }
+    renderer.setRenderTarget(emissionRT);
+    renderer.clear();
+    renderer.render( culledScene, camera );
+
+
+    // renderer.setRenderTarget(emissionRT);
+    // mesh.material.side = THREE.DoubleSide;
+    // mesh.geometry = newgeo.geometry;
+    // renderer.render( nonCulledScene, camera );
+
+
+
+
+
+
+
+    normalBufferMaterial.side = THREE.BackSide;
     normalBufferMaterial.uniforms.uCameraPos.value = camera.position;
-    renderer.clear();
-    renderer.render( scene, camera );
-    
+
+    for(let i = 0; i < culledScene.children.length; i++) {
+        culledScene.children[i].savedMaterial = culledScene.children[i].material;
+        culledScene.children[i].material = normalBufferMaterial;
+    }
+
     renderer.setRenderTarget(normalRT);
-    mesh.geometry = newgeo.geometry;
-    mesh.material.side = THREE.DoubleSide;
-    renderer.render( scene, camera );
+    renderer.clear();
+    renderer.render( culledScene, camera );
+
+    for(let i = 0; i < culledScene.children.length; i++) {
+        culledScene.children[i].material = culledScene.children[i].savedMaterial;
+    }
+    
+    // renderer.setRenderTarget(normalRT);
+    // mesh.geometry = newgeo.geometry;
+    // mesh.material.side = THREE.DoubleSide;
+    // renderer.render( nonCulledScene, camera );
+
+
+
+
+
 
 
     renderer.setRenderTarget(radianceRT.rt1);
@@ -781,218 +846,4 @@ function initGUI() {
 }
 
 
-let addt = 30; // 18;
-// let tot_triangles = 14 + addt;
-let tot_triangles = 14 + addt;
-makeSceneShaders(tot_triangles);
-// let addt = 0;
-let randBuffer = [];
-let randBufferTransl = [];
-for(let i = 0; i < addt; i++) {
-    let index = 0; //Math.floor(Math.random() * 4);
-
-    randBuffer.push(Math.random() * 2 - 1, Math.random(), Math.random() * 2 - 1, index);
-    randBuffer.push(Math.random() * 2 - 1, Math.random(), Math.random() * 2 - 1, index);
-    randBuffer.push(Math.random() * 2 - 1, Math.random(), Math.random() * 2 - 1, index);
-}
-for(let i = 0; i < addt; i++) {
-    randBufferTransl.push(
-        Math.random() * 2 - 1, 
-        Math.random() * 2 - 1, 
-        Math.random() * 2 - 1
-    );
-}
-function createGeometry(time) {
-    let lssm = 1;
-
-    var geometryCULL = new THREE.BufferGeometry();
-    // create a simple square shape. We duplicate the top left and bottom right
-    // vertices because each vertex needs to appear once per triangle.
-    var verticesCULL = [
-        -5, -5, -5, 1,
-        -5, +5, -5, 1,
-        -5, -5, +5, 1,
-
-        -5, +5, +5, 1,
-        -5, -5, +5, 1,
-        -5, +5, -5, 1,
-
-        +5, -5, +5, 2,
-        +5, +5, -5, 2,
-        +5, -5, -5, 2,
-
-        +5, +5, +5, 2,
-        +5, +5, -5, 2,
-        +5, -5, +5, 2,
-
-
-        +5, -5, -5, 0,
-        -5, -5, -5, 0,
-        -5, -5, +5, 0,
-        
-        +5, -5, +5, 0,
-        +5, -5, -5, 0,
-        -5, -5, +5, 0,
-
-        +5, +5, -5, 0,
-        -5, +5, +5, 0,
-        -5, +5, -5, 0,
-    
-        +5, +5, +5, 0,
-        -5, +5, +5, 0,
-        +5, +5, -5, 0,
-
-        +5, -5, -5, 3,
-        -5, +5, -5, 3,
-        -5, -5, -5, 3,
-
-        -5, +5, -5, 3,
-        +5, -5, -5, 3,
-        +5, +5, -5, 3,
-
-        +5, -5, +5, 0,
-        -5, -5, +5, 0,
-        -5, +5, +5, 0,
-
-        -5, +5, +5, 0,
-        +5, +5, +5, 0,
-        +5, -5, +5, 0,
-
-        // light source, will be back-culled
-        +3.85 * lssm - 2, -2.5 + 4 /*+4.9*/, -3.85 * lssm, 14,
-        -3.85 * lssm - 2, +0.9 + 4 /*+4.9*/, +3.85 * lssm, 14,
-        -3.85 * lssm - 2, -2.5 + 4 /*+4.9*/, -3.85 * lssm, 14,
-        
-        +3.85 * lssm + 2, +0.9 + 4 /*+4.9*/, +3.85 * lssm, 15,
-        -3.85 * lssm + 2, +0.9 + 4 /*+4.9*/, +3.85 * lssm, 15,
-        +3.85 * lssm + 2, -2.5 + 4 /*+4.9*/, -3.85 * lssm, 15,
-    ];
-
-
-    verticesCULL = new Float32Array(verticesCULL);
-    // threejs's vertices wont need the "index" property at the 4th position
-    let threeVerticesCULL = [];
-    for(let i = 0; i < verticesCULL.length; i+=4) {
-        threeVerticesCULL.push(verticesCULL[i+0]);
-        threeVerticesCULL.push(verticesCULL[i+1]);
-        threeVerticesCULL.push(verticesCULL[i+2]);
-    }
-    threeVerticesCULL = new Float32Array(threeVerticesCULL);
-
-    var normalsCULL = [];
-    for(let i = 0; i < threeVerticesCULL.length; i+=9) {
-        let v1 = new THREE.Vector3(threeVerticesCULL[i+0], threeVerticesCULL[i+1], threeVerticesCULL[i+2]);
-        let v2 = new THREE.Vector3(threeVerticesCULL[i+3], threeVerticesCULL[i+4], threeVerticesCULL[i+5]);
-        let v3 = new THREE.Vector3(threeVerticesCULL[i+6], threeVerticesCULL[i+7], threeVerticesCULL[i+8]);
-
-        let v2mv1 = v2.clone().sub(v1);
-        let v3mv1 = v3.clone().sub(v1);
-
-        let n = v2mv1.cross(v3mv1).normalize();
-        normalsCULL.push(n.x, n.y, n.z);
-        normalsCULL.push(n.x, n.y, n.z);
-        normalsCULL.push(n.x, n.y, n.z);
-    }
-    normalsCULL = new Float32Array(normalsCULL);
-
-    // itemSize = 3 because there are 3 values (components) per vertex
-    geometryCULL.setAttribute( 'position', new THREE.BufferAttribute( threeVerticesCULL, 3 ) );
-    geometryCULL.setAttribute( 'aMaterial', new THREE.BufferAttribute( verticesCULL, 4 ) );
-    geometryCULL.setAttribute( 'normal',   new THREE.BufferAttribute( normalsCULL,  3 ) );
-   
-
-
-
-
-    // NON-culled geometry
-    var geometry = new THREE.BufferGeometry();
-    // create a simple square shape. We duplicate the top left and bottom right
-    // vertices because each vertex needs to appear once per triangle.
-    var vertices = [
-       
-    ];
-    for(let i = 0; i < addt; i++) {
-
-        if(addt === 1) {
-            vertices.push(-3);
-            vertices.push(-4);
-            vertices.push(0);
-            vertices.push(0);
-
-            vertices.push(+3);
-            vertices.push(-4);
-            vertices.push(0);
-            vertices.push(0);
-
-            vertices.push(0);
-            vertices.push(2);
-            vertices.push(0);
-            vertices.push(0);
-            break;
-        }
-
-
-        let scale      = 4;
-        let transScale = 1;
-        let yOffs      = -3;
-
-        // let sinYOff1 = Math.sin(time + randBuffer[i*12 + 1] * 149.8776);
-        // let sinYOff2 = Math.sin(time + randBuffer[i*12 + 5] * 149.8776);
-        // let sinYOff3 = Math.sin(time + randBuffer[i*12 + 9] * 149.8776);
-
-        // disable animated y offsets
-        let sinYOff1 = 0;
-        let sinYOff2 = 0;
-        let sinYOff3 = 0;
-
-        vertices.push(randBuffer[i*12 + 0] * scale + randBufferTransl[i * 3 + 0] * transScale);
-        vertices.push(randBuffer[i*12 + 1] * scale + randBufferTransl[i * 3 + 1] * transScale + yOffs + sinYOff1);
-        vertices.push(randBuffer[i*12 + 2] * scale + randBufferTransl[i * 3 + 2] * transScale);
-        vertices.push(randBuffer[i*12 + 3]);
- 
-        vertices.push(randBuffer[i*12 + 4] * scale + randBufferTransl[i * 3 + 0] * transScale);
-        vertices.push(randBuffer[i*12 + 5] * scale + randBufferTransl[i * 3 + 1] * transScale + yOffs + sinYOff2);
-        vertices.push(randBuffer[i*12 + 6] * scale + randBufferTransl[i * 3 + 2] * transScale);
-        vertices.push(randBuffer[i*12 + 7]);
- 
-        vertices.push(randBuffer[i*12 + 8] * scale + randBufferTransl[i * 3 + 0] * transScale);
-        vertices.push(randBuffer[i*12 + 9] * scale + randBufferTransl[i * 3 + 1] * transScale + yOffs + sinYOff3);
-        vertices.push(randBuffer[i*12 + 10] * scale + randBufferTransl[i * 3 + 2] * transScale);
-        vertices.push(randBuffer[i*12 + 11]);
-    }
-    vertices = new Float32Array(vertices);
-    // threejs's vertices wont need the "index" property at the 4th position
-    let threeVertices = [];
-    for(let i = 0; i < vertices.length; i+=4) {
-        threeVertices.push(vertices[i+0]);
-        threeVertices.push(vertices[i+1]);
-        threeVertices.push(vertices[i+2]);
-    }
-    threeVertices = new Float32Array(threeVertices);
-
-    var normals = [];
-    for(let i = 0; i < threeVertices.length; i+=9) {
-        let v1 = new THREE.Vector3(threeVertices[i],   threeVertices[i+1], threeVertices[i+2]);
-        let v2 = new THREE.Vector3(threeVertices[i+3], threeVertices[i+4], threeVertices[i+5]);
-        let v3 = new THREE.Vector3(threeVertices[i+6], threeVertices[i+7], threeVertices[i+8]);
-
-        let v2mv1 = v2.clone().sub(v1);
-        let v3mv1 = v3.clone().sub(v1);
-
-        let n = v2mv1.cross(v3mv1).normalize();
-        normals.push(n.x, n.y, n.z);
-        normals.push(n.x, n.y, n.z);
-        normals.push(n.x, n.y, n.z);
-    }
-    normals = new Float32Array(normals);
-
-    // itemSize = 3 because there are 3 values (components) per vertex
-    geometry.setAttribute( 'position', new THREE.BufferAttribute( threeVertices, 3 ) );
-    geometry.setAttribute( 'aMaterial', new THREE.BufferAttribute( vertices, 4 ) );
-    geometry.setAttribute( 'normal',   new THREE.BufferAttribute( normals,  3 ) );
-
-    return {
-        geometryCULL: geometryCULL,
-        geometry: geometry
-    };
-}
+makeSceneShaders();

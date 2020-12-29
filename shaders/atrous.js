@@ -12,7 +12,6 @@ let atrous_fs = `varying vec2 vUv;
 uniform sampler2D uRadiance;
 uniform sampler2D uPosition;
 uniform sampler2D uNormal;
-uniform sampler2D uMaterial;
 uniform sampler2D uHistoryAccum;
 uniform float uFilterHistoryModulation;
 uniform float uMaxFramesHistory;
@@ -84,10 +83,10 @@ void main() {
     stepwidth *= 1.0 - (1.0 - (uMaxFramesHistory - clampedHistory) / uMaxFramesHistory) * uFilterHistoryModulation;
     // stepwidth *= history >= uMaxFramesHistory * 4.0 ? 0.0 : 1.0;
 
-    // // **************** mirror-like materials
+    // // **************** mirror-like materials  DEPRECATED DEPRECATED
     // vec4 material = texture2D(uMaterial, vUv.st + hstep);
     // if(material.w == 3.0) stepwidth *= 0.75;
-    // // **************** mirror-like materials
+    // // **************** mirror-like materials  DEPRECATED DEPRECATED
 
 
     float cum_w = 0.0;

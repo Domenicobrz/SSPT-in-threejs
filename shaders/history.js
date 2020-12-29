@@ -11,11 +11,6 @@ void main() {
     vProjectionViewMatrix = projectionMatrix * modelViewMatrix;
     vFragPos = position;
     vNormal = normal;
-
-    // vec3 viewDir = normalize(vFragPos - uCameraPos);
-    // if(dot(viewDir, normal) > 0.0) {
-    //     vNormal = -vNormal;
-    // }
 }
 `;
 
