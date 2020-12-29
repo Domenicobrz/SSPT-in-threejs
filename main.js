@@ -414,8 +414,6 @@ function animate(now) {
 
 
     let newgeo = createGeometry(now);
-    let oldgeometryCULL = mesh.geometryCULL;
-    let oldgeometry = mesh.geometry;
     mesh.geometry = newgeo.geometry;
     mesh.geometryCULL = newgeo.geometryCULL;
     radianceBufferMaterial.uniforms.needsUpdate = true;
@@ -426,10 +424,7 @@ function animate(now) {
     // we need to create moment buffers BEFORE we update normal/position RTs
     // **************** create moment buffers
     // are you surprised I'm using the matrixWorldInverse? then think more..
-    // are you surprised I'm using the matrixWorldInverse? then think more..
     let oldCameraMatrix = controls.lastViewMatrixInverse;
-    let mgCULL = createMomentGeometry(newgeo.geometryCULL, oldgeometryCULL);
-    let mg     = createMomentGeometry(newgeo.geometry, oldgeometry);
 
     momentBufferMaterial.uniforms.uOldModelViewMatrix.value = oldCameraMatrix;
     momentBufferMaterial.uniforms.uOldModelViewMatrix.needsUpdate = true;
@@ -439,11 +434,11 @@ function animate(now) {
     renderer.setRenderTarget(momentMoveRT);
     mesh.material = momentBufferMaterial;
     renderer.clear();
-    mesh.geometry = mgCULL;
+    mesh.geometry = newgeo.geometryCULL;
     renderer.render( scene, camera );
 
     renderer.setRenderTarget(momentMoveRT);
-    mesh.geometry = mg;
+    mesh.geometry = newgeo.geometry;
     momentBufferMaterial.side = THREE.DoubleSide;
     renderer.render( scene, camera );
     // reassign the new geometry after we're done here...
@@ -909,9 +904,6 @@ function createGeometry(time) {
 
 
 
-
-
-
     // NON-culled geometry
     var geometry = new THREE.BufferGeometry();
     // create a simple square shape. We duplicate the top left and bottom right
@@ -944,14 +936,14 @@ function createGeometry(time) {
         let transScale = 1;
         let yOffs      = -3;
 
-        let sinYOff1 = Math.sin(time + randBuffer[i*12 + 1] * 149.8776);
-        let sinYOff2 = Math.sin(time + randBuffer[i*12 + 5] * 149.8776);
-        let sinYOff3 = Math.sin(time + randBuffer[i*12 + 9] * 149.8776);
+        // let sinYOff1 = Math.sin(time + randBuffer[i*12 + 1] * 149.8776);
+        // let sinYOff2 = Math.sin(time + randBuffer[i*12 + 5] * 149.8776);
+        // let sinYOff3 = Math.sin(time + randBuffer[i*12 + 9] * 149.8776);
 
         // disable animated y offsets
-        // sinYOff1 = 0;
-        // sinYOff2 = 0;
-        // sinYOff3 = 0;
+        let sinYOff1 = 0;
+        let sinYOff2 = 0;
+        let sinYOff3 = 0;
 
         vertices.push(randBuffer[i*12 + 0] * scale + randBufferTransl[i * 3 + 0] * transScale);
         vertices.push(randBuffer[i*12 + 1] * scale + randBufferTransl[i * 3 + 1] * transScale + yOffs + sinYOff1);
@@ -967,10 +959,6 @@ function createGeometry(time) {
         vertices.push(randBuffer[i*12 + 9] * scale + randBufferTransl[i * 3 + 1] * transScale + yOffs + sinYOff3);
         vertices.push(randBuffer[i*12 + 10] * scale + randBufferTransl[i * 3 + 2] * transScale);
         vertices.push(randBuffer[i*12 + 11]);
-
-        // vertices[(i+2) * 9 + 1] = vertices[(i+2)*9 + 1] + Math.sin(time + randBuffer[(i+2)*9] + 1.2); 
-        // vertices[(i+2) * 9 + 4] = vertices[(i+2)*9 + 4] + Math.sin(time + randBuffer[(i+2)*9] + 3.3);
-        // vertices[(i+2) * 9 + 7] = vertices[(i+2)*9 + 7] + Math.sin(time + randBuffer[(i+2)*9] + 23.3);
     }
     vertices = new Float32Array(vertices);
     // threejs's vertices wont need the "index" property at the 4th position
@@ -1003,29 +991,8 @@ function createGeometry(time) {
     geometry.setAttribute( 'aMaterial', new THREE.BufferAttribute( vertices, 4 ) );
     geometry.setAttribute( 'normal',   new THREE.BufferAttribute( normals,  3 ) );
 
-
-
-
-
-
-
-
-
-
-
-
-
-
     return {
         geometryCULL: geometryCULL,
         geometry: geometry
     };
-}
-
-function createMomentGeometry(newgeo, oldgeo) {
-    var geometry = new THREE.BufferGeometry();
-    geometry.setAttribute( 'position',    new THREE.BufferAttribute( newgeo.attributes.position.array, 3 ));
-    geometry.setAttribute( 'oldPosition', new THREE.BufferAttribute( oldgeo.attributes.position.array, 3 ));
-    
-    return geometry;
 }
