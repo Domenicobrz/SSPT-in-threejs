@@ -64,6 +64,7 @@ document.body.appendChild( stats.dom );
 
 let culledScene;
 let nonCulledScene;
+let momentBufferScene;
 
 function init() {
     renderer = new THREE.WebGLRenderer({ antialias: false });
@@ -78,6 +79,7 @@ function init() {
     scene = new THREE.Scene();
     culledScene = new THREE.Scene();
     nonCulledScene = new THREE.Scene();
+    momentBufferScene = new THREE.Scene();
     displayScene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
 
@@ -297,10 +299,7 @@ function init() {
     lightBoxMesh1.position.set(+3, +3, 0);
     lightBoxMesh2.position.set(-3, -3, 0);
 
-    // culledScene.add(cornellBoxMesh, testBox, lightBoxMesh1, lightBoxMesh2);
-    culledScene.add(cornellBoxMesh, lightBoxMesh1, lightBoxMesh2);
-
-
+    culledScene.add(cornellBoxMesh, testBox, lightBoxMesh1, lightBoxMesh2);
 
 
 
@@ -442,20 +441,30 @@ function animate(now) {
     // are you surprised I'm using the matrixWorldInverse? then think more..
     let oldCameraMatrix = controls.lastViewMatrixInverse;
 
-    momentBufferMaterial.uniforms.uOldModelViewMatrix.value = oldCameraMatrix;
-    momentBufferMaterial.uniforms.uOldModelViewMatrix.needsUpdate = true;
-    momentBufferMaterial.uniforms.needsUpdate = true;
     momentBufferMaterial.needsUpdate = true;
     momentBufferMaterial.side = THREE.BackSide;
 
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].savedMaterial = culledScene.children[i].material;
-        culledScene.children[i].material = momentBufferMaterial;
-    }
-
     renderer.setRenderTarget(momentMoveRT);
     renderer.clear();
-    renderer.render( culledScene, camera );
+
+    for(let i = culledScene.children.length - 1; i >= 0; i--) {
+        culledScene.children[i].savedMaterial = culledScene.children[i].material;
+        culledScene.children[i].material = momentBufferMaterial;
+
+        let viewModelMatrix = new THREE.Matrix4();
+        viewModelMatrix.multiplyMatrices(oldCameraMatrix, culledScene.children[i].matrixWorld);
+        momentBufferMaterial.uniforms.uOldModelViewMatrix.value = viewModelMatrix;
+        momentBufferMaterial.uniforms.uOldModelViewMatrix.needsUpdate = true;
+        momentBufferMaterial.uniforms.needsUpdate = true;
+
+        momentBufferScene.add(culledScene.children[i]);
+
+        renderer.render( momentBufferScene, camera );
+
+        // re-add again this object to culledScene since it was removed by momentBufferScene.add(...)
+        // it should also remove the object from momentBufferScene
+        culledScene.add(momentBufferScene.children[0]);
+    }
 
     for(let i = 0; i < culledScene.children.length; i++) {
         culledScene.children[i].material = culledScene.children[i].savedMaterial;
