@@ -50,6 +50,7 @@ let kpress;
 let lpress;
 let opress;
 let ppress;
+let jpress;
 let npress;
 let mpress;
 let ipress;
@@ -256,22 +257,22 @@ function init() {
 
 
 
-    let emissiveCulledTestMaterial = new THREE.ShaderMaterial({
+    let emissiveTestMaterial = new THREE.ShaderMaterial({
         uniforms: {
             "uEmissive": { value: new THREE.Vector3(5, 0.5, 0.5) },
             "uColor": { value: new THREE.Vector3(1,1,1) },
             "uStep": { value: 0 },
         },
-        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
     });
 
-    let emissiveCulledTestMaterial2 = new THREE.ShaderMaterial({
+    let emissiveTestMaterial2 = new THREE.ShaderMaterial({
         uniforms: {
             "uEmissive": { value: new THREE.Vector3(0.5, 0.5,5) },
             "uColor": { value: new THREE.Vector3(1,1,1) },
             "uStep": { value: 0 },
         },
-        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
     });
 
     let culledTestMaterial = new THREE.ShaderMaterial({
@@ -293,13 +294,15 @@ function init() {
     });
     
     let cornellBoxMesh  = new THREE.Mesh(new THREE.BoxBufferGeometry(10, 10, 10), culledTestMaterial);
-    let testBox         = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), culledTestMaterial);
-    let lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveCulledTestMaterial);
-    let lightBoxMesh2   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveCulledTestMaterial2);
+    culledScene.add(cornellBoxMesh);
+
+    let testBox         = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), testMaterial);
+    let lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveTestMaterial);
+    let lightBoxMesh2   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveTestMaterial2);
     lightBoxMesh1.position.set(+3, +3, 0);
     lightBoxMesh2.position.set(-3, -3, 0);
+    nonCulledScene.add(testBox, lightBoxMesh1, lightBoxMesh2);
 
-    culledScene.add(cornellBoxMesh, testBox, lightBoxMesh1, lightBoxMesh2);
 
 
 
@@ -308,6 +311,7 @@ function init() {
         if(e.key == "l") lpress = true;
         if(e.key == "p") ppress = true;
         if(e.key == "o") opress = true;
+        if(e.key == "j") jpress = true;
         if(e.key == "m") mpress = true;
         if(e.key == "n") npress = true;
         if(e.key == "i") ipress = true;
@@ -318,6 +322,7 @@ function init() {
         if(e.key == "l") lpress = false;
         if(e.key == "p") ppress = false;
         if(e.key == "o") opress = false;
+        if(e.key == "j") jpress = false;
         if(e.key == "m") mpress = false;
         if(e.key == "n") npress = false;
         if(e.key == "i") ipress = false;
@@ -465,17 +470,36 @@ function animate(now) {
         // it should also remove the object from momentBufferScene
         culledScene.add(momentBufferScene.children[0]);
     }
-
     for(let i = 0; i < culledScene.children.length; i++) {
         culledScene.children[i].material = culledScene.children[i].savedMaterial;
     }
 
-    // renderer.setRenderTarget(momentMoveRT);
-    // mesh.geometry = newgeo.geometry;
-    // momentBufferMaterial.side = THREE.DoubleSide;
-    // renderer.render( nonCulledScene, camera );
-    // // reassign the new geometry after we're done here...
-    // mesh.geometry = newgeo.geometry;
+    // ---
+
+    momentBufferMaterial.needsUpdate = true;
+    momentBufferMaterial.side = THREE.DoubleSide;
+
+    for(let i = nonCulledScene.children.length - 1; i >= 0; i--) {
+        nonCulledScene.children[i].savedMaterial = nonCulledScene.children[i].material;
+        nonCulledScene.children[i].material = momentBufferMaterial;
+
+        let viewModelMatrix = new THREE.Matrix4();
+        viewModelMatrix.multiplyMatrices(oldCameraMatrix, nonCulledScene.children[i].matrixWorld);
+        momentBufferMaterial.uniforms.uOldModelViewMatrix.value = viewModelMatrix;
+        momentBufferMaterial.uniforms.uOldModelViewMatrix.needsUpdate = true;
+        momentBufferMaterial.uniforms.needsUpdate = true;
+
+        momentBufferScene.add(nonCulledScene.children[i]);
+
+        renderer.render( momentBufferScene, camera );
+
+        // re-add again this object to culledScene since it was removed by momentBufferScene.add(...)
+        // it should also remove the object from momentBufferScene
+        nonCulledScene.add(momentBufferScene.children[0]);
+    }
+    for(let i = 0; i < nonCulledScene.children.length; i++) {
+        nonCulledScene.children[i].material = nonCulledScene.children[i].savedMaterial;
+    }
     // **************** create moment buffers - END
 
 
@@ -501,10 +525,26 @@ function animate(now) {
         culledScene.children[i].material = culledScene.children[i].savedMaterial;
     }
 
-    // renderer.setRenderTarget(historyRT.rt1);
-    // historyTestMaterial.side = THREE.DoubleSide;
-    // mesh.geometry = newgeo.geometry;
-    // renderer.render( nonCulledScene, camera );
+    // ---
+
+    historyTestMaterial.side = THREE.DoubleSide;
+    
+    for(let i = 0; i < nonCulledScene.children.length; i++) {
+        nonCulledScene.children[i].savedMaterial = nonCulledScene.children[i].material;
+        nonCulledScene.children[i].material = historyTestMaterial;
+    }
+
+    renderer.render( nonCulledScene, camera );
+
+    for(let i = 0; i < nonCulledScene.children.length; i++) {
+        nonCulledScene.children[i].material = nonCulledScene.children[i].savedMaterial;
+    }
+
+
+
+
+
+
 
 
 
@@ -541,10 +581,24 @@ function animate(now) {
         culledScene.children[i].material = culledScene.children[i].savedMaterial;
     }
 
-    // renderer.setRenderTarget(positionRT);
-    // positionBufferMaterial.side = THREE.DoubleSide;
-    // mesh.geometry = newgeo.geometry;
-    // renderer.render( nonCulledScene, camera );
+    // ---
+
+    positionBufferMaterial.side = THREE.DoubleSide;
+
+    for(let i = 0; i < nonCulledScene.children.length; i++) {
+        nonCulledScene.children[i].savedMaterial = nonCulledScene.children[i].material;
+        nonCulledScene.children[i].material = positionBufferMaterial;
+    }
+
+    renderer.render( nonCulledScene, camera );
+
+    for(let i = 0; i < nonCulledScene.children.length; i++) {
+        nonCulledScene.children[i].material = nonCulledScene.children[i].savedMaterial;
+    }
+
+
+
+
 
 
 
@@ -559,11 +613,15 @@ function animate(now) {
     renderer.clear();
     renderer.render( culledScene, camera );
 
+    // ---
 
-    // renderer.setRenderTarget(emissionRT);
-    // mesh.material.side = THREE.DoubleSide;
-    // mesh.geometry = newgeo.geometry;
-    // renderer.render( nonCulledScene, camera );
+    for(let i = 0; i < nonCulledScene.children.length; i++) {
+        nonCulledScene.children[i].material.uniforms.uStep = 0;
+    }
+    renderer.render( nonCulledScene, camera );
+
+
+
 
 
 
@@ -587,10 +645,21 @@ function animate(now) {
         culledScene.children[i].material = culledScene.children[i].savedMaterial;
     }
     
-    // renderer.setRenderTarget(normalRT);
-    // mesh.geometry = newgeo.geometry;
-    // mesh.material.side = THREE.DoubleSide;
-    // renderer.render( nonCulledScene, camera );
+    // ---
+
+    normalBufferMaterial.side = THREE.DoubleSide;
+
+    for(let i = 0; i < nonCulledScene.children.length; i++) {
+        nonCulledScene.children[i].savedMaterial = nonCulledScene.children[i].material;
+        nonCulledScene.children[i].material = normalBufferMaterial;
+    }
+
+    renderer.render( nonCulledScene, camera );
+
+    for(let i = 0; i < nonCulledScene.children.length; i++) {
+        nonCulledScene.children[i].material = nonCulledScene.children[i].savedMaterial;
+    }
+
 
 
 
@@ -681,6 +750,7 @@ function animate(now) {
     if(kpress) displayQuadMesh.material.uniforms.uTexture.value = radianceRT.rt3.texture;
     if(lpress) displayQuadMesh.material.uniforms.uTexture.value = normalRT.texture;
     if(opress) displayQuadMesh.material.uniforms.uTexture.value = positionRT.texture;
+    if(jpress) displayQuadMesh.material.uniforms.uTexture.value = historyRT.rt1.texture;
     if(ppress) displayQuadMesh.material.uniforms.uTexture.value = historyRT.rt3.texture;
     if(npress) displayQuadMesh.material.uniforms.uTexture.value = momentMoveRT.texture;
     if(mpress) displayQuadMesh.material.uniforms.uTexture.value = radianceRT.rt1.texture;

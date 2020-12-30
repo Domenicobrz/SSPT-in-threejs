@@ -1,6 +1,7 @@
 let historyTest_vs = `
 varying mat4 vProjectionViewMatrix;
 varying vec3 vFragPos;
+varying vec3 vWorldFragPos;
 varying vec3 vNormal;
 
 uniform vec3 uCameraPos;
@@ -9,7 +10,8 @@ void main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
 
     vProjectionViewMatrix = projectionMatrix * modelViewMatrix;
-    vFragPos = position;
+    vFragPos = position; // multiplied by PVM in fragment shader
+    vWorldFragPos = (modelMatrix * vec4(position, 1.0)).xyz;
     vNormal = normal;
 }
 `;
@@ -17,6 +19,7 @@ void main() {
 let historyTest_fs = `
 varying mat4 vProjectionViewMatrix;
 varying vec3 vFragPos;
+varying vec3 vWorldFragPos;
 varying vec3 vNormal;
 
 uniform sampler2D uNormalBuffer;
@@ -34,13 +37,13 @@ void main() {
     // reprojection test
     vec2 olduv = uv + texture2D(uMomentMove, uv).xy;
     vec3 oldNormal = texture2D(uNormalBuffer, olduv).xyz;
-    vec3 oldPosition = texture2D(uPositionBuffer, olduv).xyz;
+    vec3 oldWorldPosition = texture2D(uPositionBuffer, olduv).xyz;
 
     vec3 normal = normalize(vNormal);
 
 
-    if(dot(oldNormal, normal) < 0.9)          success = vec3(0.0);
-    if(length(oldPosition - vFragPos) > 0.25) success = vec3(0.0);
+    if(dot(oldNormal, normal) < 0.9) success = vec3(0.0);
+    if(length(oldWorldPosition - vWorldFragPos) > 0.25) success = vec3(0.0);
 
     gl_FragColor = vec4(success, 1.0);
 }

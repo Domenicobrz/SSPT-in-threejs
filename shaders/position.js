@@ -3,7 +3,7 @@ varying vec3 vWorldSpacePosition;
 
 void main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-    vWorldSpacePosition = position;
+    vWorldSpacePosition = (modelMatrix * vec4(position, 1.0)).xyz;
 }
 `;
 
