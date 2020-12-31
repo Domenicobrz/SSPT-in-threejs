@@ -60,6 +60,10 @@ void main() {
     vProjectionViewMatrix = projectionMatrix * modelViewMatrix;
     vFragPos = position; // multiplied by PVM in fragment shader
     vWorldFragPos = (modelMatrix * vec4(position, 1.0)).xyz;
+
+    // using worldNormalMatrix() instead of "normalMatrix" is necessary because normalMatrix also contains the viewMatrix
+    // using worldNormalMatrix() instead of "normalMatrix" is necessary because normalMatrix also contains the viewMatrix
+    // using worldNormalMatrix() instead of "normalMatrix" is necessary because normalMatrix also contains the viewMatrix
     vNormal = worldNormalMatrix() * normal;
 }
 `;

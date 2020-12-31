@@ -256,10 +256,10 @@ function init() {
 
 
 
-
+    let em = 10;
     let emissiveTestMaterial = new THREE.ShaderMaterial({
         uniforms: {
-            "uEmissive": { value: new THREE.Vector3(5, 0.5, 0.5) },
+            "uEmissive": { value: new THREE.Vector3(5 * em, 0.5 * em, 0.5 * em) },
             "uColor": { value: new THREE.Vector3(1,1,1) },
             "uStep": { value: 0 },
         },
@@ -268,7 +268,7 @@ function init() {
 
     let emissiveTestMaterial2 = new THREE.ShaderMaterial({
         uniforms: {
-            "uEmissive": { value: new THREE.Vector3(0.5, 0.5,5) },
+            "uEmissive": { value: new THREE.Vector3(0.5 * em, 0.5 * em, 5 * em) },
             "uColor": { value: new THREE.Vector3(1,1,1) },
             "uStep": { value: 0 },
         },
@@ -296,14 +296,23 @@ function init() {
     window.cornellBoxMesh  = new THREE.Mesh(new THREE.BoxBufferGeometry(10, 10, 10), culledTestMaterial);
     culledScene.add(cornellBoxMesh);
 
-    window.testBox         = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), testMaterial);
     window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveTestMaterial);
     window.lightBoxMesh2   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveTestMaterial2);
     lightBoxMesh1.position.set(+3, +3, 0);
     lightBoxMesh2.position.set(-3, -3, 0);
-    nonCulledScene.add(testBox, lightBoxMesh1, lightBoxMesh2);
+    nonCulledScene.add(lightBoxMesh1, lightBoxMesh2);
 
 
+    for(let i = 0; i < 80; i++) {
+        let size = Math.random() * 1.5 + 0.15;
+        let box = new THREE.Mesh(new THREE.BoxBufferGeometry(size, size, size), testMaterial);
+        box.position.set(
+            (Math.random() * 2 - 1) * 5,
+            (Math.random() * 2 - 1) * 5,
+            (Math.random() * 2 - 1) * 5,
+        );
+        nonCulledScene.add(box);
+    }
 
 
     window.addEventListener("keydown", (e) => {
@@ -449,8 +458,17 @@ function animate(now) {
         nonCulledScene.children[i].oldWorldMatrix = nonCulledScene.children[i].matrixWorld.clone();
     }
 
-    testBox.rotateX(0.16);
-    testBox.updateMatrixWorld();
+    lightBoxMesh1.rotateX(0.06);
+    lightBoxMesh1.rotateY(0.03);
+    lightBoxMesh1.rotateZ(0.02);
+    lightBoxMesh1.position.set(-3, Math.cos(now * 0.3) * 3, -3);
+    lightBoxMesh1.updateMatrixWorld();
+    
+    lightBoxMesh2.rotateX(0.03);
+    lightBoxMesh2.rotateY(0.02);
+    lightBoxMesh2.rotateZ(0.01);
+    lightBoxMesh2.position.set(+3, Math.cos(now * 0.5) * 3, +3);
+    lightBoxMesh2.updateMatrixWorld();
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
 
@@ -895,7 +913,7 @@ function initGUI() {
     var rpf = gui.addFolder('Reprojection Params');
     var qpf = gui.addFolder('Quality Presets');
 
-    wff.add(controller, 'c_phi', 0, 200).onChange(function(value) {
+    wff.add(controller, 'c_phi', 0, 2000).onChange(function(value) {
         atrousMaterial.uniforms.uC_phi.value = value;
     });
     wff.add(controller, 'n_phi', 0.01, 30).onChange(function(value) {

@@ -22,8 +22,12 @@ vec3 acesFilm(const vec3 x) {
 }
 
 void main() {
+
+    // float exposure = 3.0;
+    float exposure = -1.0;
+
     vec3 color = texture2D(uTexture, vUv).xyz;
-    color *= pow(2.0, -1.0);
+    color *= pow(2.0, exposure);
     vec3 mapped = acesFilm(color);
 
     // // gamma correction

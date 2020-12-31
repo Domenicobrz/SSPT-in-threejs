@@ -52,6 +52,10 @@ mat3 worldNormalMatrix() {
 
 void main() {
     gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+
+    // using worldNormalMatrix() instead of "normalMatrix" is necessary because normalMatrix also contains the viewMatrix
+    // using worldNormalMatrix() instead of "normalMatrix" is necessary because normalMatrix also contains the viewMatrix
+    // using worldNormalMatrix() instead of "normalMatrix" is necessary because normalMatrix also contains the viewMatrix
     vWorldSpaceNormal = worldNormalMatrix() * normal;
     vWorldSpacePosition = position;
 }
