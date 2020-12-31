@@ -449,7 +449,7 @@ function animate(now) {
         nonCulledScene.children[i].oldWorldMatrix = nonCulledScene.children[i].matrixWorld.clone();
     }
 
-    testBox.position.set(Math.cos(now * 30), 0, 0);
+    testBox.position.set(Math.cos(now * 15), 0, 0);
     testBox.updateMatrixWorld();
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
@@ -500,7 +500,7 @@ function animate(now) {
         nonCulledScene.children[i].material = momentBufferMaterial;
 
         let viewModelMatrix = new THREE.Matrix4();
-        viewModelMatrix.multiplyMatrices(oldCameraMatrix, nonCulledScene.children[i].matrixWorld);
+        viewModelMatrix.multiplyMatrices(oldCameraMatrix, nonCulledScene.children[i].oldWorldMatrix);
         momentBufferMaterial.uniforms.uOldModelViewMatrix.value = viewModelMatrix;
         momentBufferMaterial.uniforms.uOldModelViewMatrix.needsUpdate = true;
         momentBufferMaterial.uniforms.needsUpdate = true;
