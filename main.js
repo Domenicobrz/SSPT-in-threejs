@@ -449,7 +449,7 @@ function animate(now) {
         nonCulledScene.children[i].oldWorldMatrix = nonCulledScene.children[i].matrixWorld.clone();
     }
 
-    testBox.position.set(Math.cos(now * 15), 0, 0);
+    testBox.rotateX(0.16);
     testBox.updateMatrixWorld();
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
