@@ -293,12 +293,12 @@ function init() {
         fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
     });
     
-    let cornellBoxMesh  = new THREE.Mesh(new THREE.BoxBufferGeometry(10, 10, 10), culledTestMaterial);
+    window.cornellBoxMesh  = new THREE.Mesh(new THREE.BoxBufferGeometry(10, 10, 10), culledTestMaterial);
     culledScene.add(cornellBoxMesh);
 
-    let testBox         = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), testMaterial);
-    let lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveTestMaterial);
-    let lightBoxMesh2   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveTestMaterial2);
+    window.testBox         = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), testMaterial);
+    window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveTestMaterial);
+    window.lightBoxMesh2   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveTestMaterial2);
     lightBoxMesh1.position.set(+3, +3, 0);
     lightBoxMesh2.position.set(-3, -3, 0);
     nonCulledScene.add(testBox, lightBoxMesh1, lightBoxMesh2);
@@ -440,6 +440,22 @@ function animate(now) {
 
 
 
+    // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
+    // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
+    for(let i = 0; i < culledScene.children.length; i++) {
+        culledScene.children[i].oldWorldMatrix = culledScene.children[i].matrixWorld.clone();
+    }
+    for(let i = 0; i < nonCulledScene.children.length; i++) {
+        nonCulledScene.children[i].oldWorldMatrix = nonCulledScene.children[i].matrixWorld.clone();
+    }
+
+    testBox.position.set(Math.cos(now * 30), 0, 0);
+    testBox.updateMatrixWorld();
+    // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
+    // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
+
+
+
 
     // we need to create moment buffers BEFORE we update normal/position RTs
     // **************** create moment buffers
@@ -457,7 +473,7 @@ function animate(now) {
         culledScene.children[i].material = momentBufferMaterial;
 
         let viewModelMatrix = new THREE.Matrix4();
-        viewModelMatrix.multiplyMatrices(oldCameraMatrix, culledScene.children[i].matrixWorld);
+        viewModelMatrix.multiplyMatrices(oldCameraMatrix, culledScene.children[i].oldWorldMatrix);
         momentBufferMaterial.uniforms.uOldModelViewMatrix.value = viewModelMatrix;
         momentBufferMaterial.uniforms.uOldModelViewMatrix.needsUpdate = true;
         momentBufferMaterial.uniforms.needsUpdate = true;
