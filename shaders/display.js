@@ -11,6 +11,7 @@ let display_fs = `
 varying vec2 vUv;
 
 uniform sampler2D uTexture;
+uniform float uExposure;
 
 vec3 acesFilm(const vec3 x) {
     const float a = 2.51;
@@ -24,7 +25,7 @@ vec3 acesFilm(const vec3 x) {
 void main() {
 
     // float exposure = 3.0;
-    float exposure = -1.0;
+    float exposure = uExposure;
 
     vec3 color = texture2D(uTexture, vUv).xyz;
     color *= pow(2.0, exposure);

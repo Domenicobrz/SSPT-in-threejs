@@ -22,6 +22,7 @@ function makeSceneShaders() {
     uniform float uMirrorIndex;
     uniform vec4  uRandom;
 
+    uniform sampler2D uAlbedoBuffer;
     uniform sampler2D uPositionBuffer;
     uniform sampler2D uNormalBuffer;
     uniform sampler2D uEmissionBuffer;
@@ -120,8 +121,9 @@ function makeSceneShaders() {
         vec3 viewDir = rd;
 
 
-        vec3 posBuff  = texture2D(uPositionBuffer, vUv).xyz;
-        vec3 normBuff = texture2D(uNormalBuffer, vUv).xyz;
+        vec3 albedoBuff   = texture2D(uAlbedoBuffer, vUv).xyz;
+        vec3 posBuff      = texture2D(uPositionBuffer, vUv).xyz;
+        vec3 normBuff     = texture2D(uNormalBuffer, vUv).xyz;
         vec3 emissionBuff = texture2D(uEmissionBuffer, vUv).xyz;
         if(dot(rd, normBuff) > 0.0) normBuff = -normBuff;
 
@@ -154,24 +156,40 @@ function makeSceneShaders() {
 
         // ************ try screen-space intersection, if we can find something output red ************
             // **** quality params
+                // desperate quality
+                // float startingStep = 0.05;
+                // float stepMult = 1.75;
+                // const int steps = 20;
+                // const int binarySteps = 5;
+                // const int bounces = 2;
+
+                // low quality
                 // float startingStep = 0.05;
                 // float stepMult = 1.25;
                 // const int steps = 20;
                 // const int binarySteps = 5;
                 // const int bounces = 3;
 
+                // medium quality
                 float startingStep = 0.05;
-                float stepMult = 1.12;
-                const int steps = 40;
-                const int binarySteps = 6;
+                float stepMult = 1.165;
+                const int steps = 30;
+                const int binarySteps = 5;
                 const int bounces = 3;
+
+                // high quality
+                // float startingStep = 0.05;
+                // float stepMult = 1.12;
+                // const int steps = 40;
+                // const int binarySteps = 6;
+                // const int bounces = 3;
             // **** quality params - END
 
         vec3 mult = vec3(1.0);
         float maxIntersectionDepthDistance = 0.5;
         ro = posBuff;
         rd = sampleDiffuseHemisphere(normBuff, ro);
-        mult *= max(dot(rd, normBuff), 0.0);
+        mult *= albedoBuff * max(dot(rd, normBuff), 0.0);
 
         for(int b = 0; b < bounces; b++) {
             vec3 p = ro;
@@ -243,6 +261,7 @@ function makeSceneShaders() {
                         vec2 p2Uv = (projP2 / projP2.w).xy * 0.5 + 0.5;
                         vec4 iemission = texture2D(uEmissionBuffer, p2Uv);
                         vec3 inormal   = texture2D(uNormalBuffer, p2Uv).xyz;
+                        vec3 ialbedo   = texture2D(uAlbedoBuffer, p2Uv).xyz;
                         if(dot(inormal, rd) > 0.0) inormal = -inormal;
 
                         radiance += iemission.xyz * mult;
@@ -250,7 +269,7 @@ function makeSceneShaders() {
                         ro = p1;
                         rd = sampleDiffuseHemisphere(inormal, ro);
                         ro = ro + rd * 0.95;
-                        mult *= max(dot(rd, inormal), 0.0);
+                        mult *= ialbedo * max(dot(rd, inormal), 0.0);
 
                     } else {
                         // intersection is invalid

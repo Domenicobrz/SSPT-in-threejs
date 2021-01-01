@@ -25,6 +25,7 @@ let pmremGenerator;
 let hdrCubeRenderTarget;
 let HDRtexture;
 
+let albedoRT;
 let positionRT;
 let normalRT;
 let emissionRT;
@@ -54,6 +55,7 @@ let jpress;
 let npress;
 let mpress;
 let ipress;
+let bpress;
 
 let pixelRatio = 0.5;
 let pr_width   = Math.floor(innerWidth  * pixelRatio);
@@ -120,6 +122,13 @@ function init() {
         stencilBuffer: false,
     });
 
+    albedoRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
+        magFilter: filterMode,
+        minFilter: filterMode,
+        type: THREE.FloatType,
+        stencilBuffer: false,
+    });
+
     momentMoveRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
         magFilter: filterMode,
         minFilter: filterMode,
@@ -169,6 +178,7 @@ function init() {
 
             "uMirrorIndex": { value: 1 },
 
+            "uAlbedoBuffer":   { type: "t", value: albedoRT.texture },
             "uPositionBuffer": { type: "t", value: positionRT.texture },
             "uNormalBuffer":   { type: "t", value: normalRT.texture },
             "uEmissionBuffer": { type: "t", value: emissionRT.texture },
@@ -247,6 +257,7 @@ function init() {
     window.displayMaterial = new THREE.ShaderMaterial({
         uniforms: {
             "uTexture": { type: "t", value: radianceRT.rt3.texture },
+            "uExposure": { value: -1 },
         },
         fragmentShader: display_fs,
         vertexShader: display_vs,
@@ -254,13 +265,11 @@ function init() {
     });
 
 
-
-
     let em = 10;
     let emissiveTestMaterial = new THREE.ShaderMaterial({
         uniforms: {
-            "uEmissive": { value: new THREE.Vector3(5 * em, 0.5 * em, 0.5 * em) },
-            "uColor": { value: new THREE.Vector3(1,1,1) },
+            "uEmissive": { value: new THREE.Vector3(0.5 * em, 0.5 * em, 0.5 * em) },
+            "uAlbedo": { value: new THREE.Vector3(1,1,1) },
             "uStep": { value: 0 },
         },
         fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
@@ -268,8 +277,8 @@ function init() {
 
     let emissiveTestMaterial2 = new THREE.ShaderMaterial({
         uniforms: {
-            "uEmissive": { value: new THREE.Vector3(0.5 * em, 0.5 * em, 5 * em) },
-            "uColor": { value: new THREE.Vector3(1,1,1) },
+            "uEmissive": { value: new THREE.Vector3(0.5 * em, 0.5 * em, 0.5 * em) },
+            "uAlbedo": { value: new THREE.Vector3(1,1,1) },
             "uStep": { value: 0 },
         },
         fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
@@ -278,41 +287,83 @@ function init() {
     let culledTestMaterial = new THREE.ShaderMaterial({
         uniforms: {
             "uEmissive": { value: new THREE.Vector3(0,0,0) },
-            "uColor": { value: new THREE.Vector3(1,1,1) },
+            "uAlbedo": { value: new THREE.Vector3(1,1,1) },
             "uStep": { value: 0 },
         },
         fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
     });
     
-    let testMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-            "uEmissive": { value: new THREE.Vector3(0,0,0) },
-            "uColor": { value: new THREE.Vector3(1,1,1) },
-            "uStep": { value: 0 },
-        },
-        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
-    });
+   
     
     window.cornellBoxMesh  = new THREE.Mesh(new THREE.BoxBufferGeometry(10, 10, 10), culledTestMaterial);
     culledScene.add(cornellBoxMesh);
 
-    window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveTestMaterial);
+    window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(8, 0.1, 8), emissiveTestMaterial);
     window.lightBoxMesh2   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveTestMaterial2);
-    lightBoxMesh1.position.set(+3, +3, 0);
+    lightBoxMesh1.position.set(0, +4.9, 0);
     lightBoxMesh2.position.set(-3, -3, 0);
-    nonCulledScene.add(lightBoxMesh1, lightBoxMesh2);
+    nonCulledScene.add(lightBoxMesh1);
 
 
-    for(let i = 0; i < 80; i++) {
-        let size = Math.random() * 1.5 + 0.15;
-        let box = new THREE.Mesh(new THREE.BoxBufferGeometry(size, size, size), testMaterial);
-        box.position.set(
-            (Math.random() * 2 - 1) * 5,
-            (Math.random() * 2 - 1) * 5,
-            (Math.random() * 2 - 1) * 5,
-        );
-        nonCulledScene.add(box);
+    window.boxes = [];
+    for(let j = 0; j < 8; j++) {
+        let r = 1; //Math.random();
+        let g = 1; //Math.random();
+        let b = 1; //Math.random();
+
+        let testMaterial = new THREE.ShaderMaterial({
+            uniforms: {
+                "uEmissive": { value: new THREE.Vector3(0,0,0) },
+                "uAlbedo": { value: new THREE.Vector3(r,g,b) },
+                "uStep": { value: 0 },
+            },
+            fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
+        });
+
+        for(let i = 0; i < 4; i++) {
+            let size = Math.random() * 1.5 + 0.15;
+            let box = new THREE.Mesh(new THREE.BoxBufferGeometry(size, size, size), testMaterial);
+            box.position.set(
+                (Math.random() * 2 - 1) * 5,
+                (Math.random() * 2 - 1) * 3 - 2,
+                (Math.random() * 2 - 1) * 5,
+            );
+            nonCulledScene.add(box);
+            box.rotXSpeed    = Math.pow(Math.random(), 2.0) * 0.02;
+            box.rotYSpeed    = Math.pow(Math.random(), 2.0) * 0.02;
+            box.rotZSpeed    = Math.pow(Math.random(), 2.0) * 0.02;
+            
+            box.translXSpeed = Math.random() * 0.02;
+            box.translYSpeed = Math.random() * 0.02;
+            box.translZSpeed = Math.random() * 0.02;
+
+            box.basePosition = [box.position.x, box.position.y, box.position.z];
+            boxes.push(box);
+        }
     }
+
+    let cornellBRedMat = new THREE.ShaderMaterial({ uniforms: { "uEmissive": { value: new THREE.Vector3(0,0,0) },
+            "uAlbedo": { value: new THREE.Vector3(1,0.1,0.2) }, "uStep": { value: 0 },
+        }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+    });
+    let cornellBGreenMat = new THREE.ShaderMaterial({ uniforms: { "uEmissive": { value: new THREE.Vector3(0,0,0) },
+            "uAlbedo": { value: new THREE.Vector3(0.1,1,0.2) }, "uStep": { value: 0 },
+        }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+    });
+    let cbox1 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), cornellBGreenMat);
+    cbox1.position.set(+4.975, 0, 0);
+    cbox1.rotation.y = Math.PI * 0.5;
+    culledScene.add(cbox1);
+    
+    let cbox2 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), cornellBRedMat);
+    cbox2.position.set(-4.975, 0, 0);
+    cbox2.rotation.y = -Math.PI * 0.5;
+    culledScene.add(cbox2);
+
+
+
+
+
 
 
     window.addEventListener("keydown", (e) => {
@@ -324,6 +375,7 @@ function init() {
         if(e.key == "m") mpress = true;
         if(e.key == "n") npress = true;
         if(e.key == "i") ipress = true;
+        if(e.key == "b") bpress = true;
         
     });
     window.addEventListener("keyup", (e) => {
@@ -335,6 +387,7 @@ function init() {
         if(e.key == "m") mpress = false;
         if(e.key == "n") npress = false;
         if(e.key == "i") ipress = false;
+        if(e.key == "b") bpress = false;
     });
 
 
@@ -458,17 +511,30 @@ function animate(now) {
         nonCulledScene.children[i].oldWorldMatrix = nonCulledScene.children[i].matrixWorld.clone();
     }
 
-    lightBoxMesh1.rotateX(0.06);
-    lightBoxMesh1.rotateY(0.03);
-    lightBoxMesh1.rotateZ(0.02);
-    lightBoxMesh1.position.set(-3, Math.cos(now * 0.3) * 3, -3);
-    lightBoxMesh1.updateMatrixWorld();
+    // lightBoxMesh1.rotateX(0.06);
+    // lightBoxMesh1.rotateY(0.03);
+    // lightBoxMesh1.rotateZ(0.02);
+    // lightBoxMesh1.position.set(-3, Math.cos(now * 0.3) * 3, -3);
+    // lightBoxMesh1.updateMatrixWorld();
     
-    lightBoxMesh2.rotateX(0.03);
-    lightBoxMesh2.rotateY(0.02);
-    lightBoxMesh2.rotateZ(0.01);
-    lightBoxMesh2.position.set(+3, Math.cos(now * 0.5) * 3, +3);
-    lightBoxMesh2.updateMatrixWorld();
+    // lightBoxMesh2.rotateX(0.03);
+    // lightBoxMesh2.rotateY(0.02);
+    // lightBoxMesh2.rotateZ(0.01);
+    // lightBoxMesh2.position.set(+3, Math.cos(now * 0.5) * 3, +3);
+    // lightBoxMesh2.updateMatrixWorld();
+
+    for(let i = 0; i < boxes.length; i++) {
+        boxes[i].rotateX(boxes[i].rotXSpeed);
+        boxes[i].rotateY(boxes[i].rotYSpeed);
+        boxes[i].rotateZ(boxes[i].rotZSpeed);
+        
+        boxes[i].position.set(
+            boxes[i].basePosition[0] + Math.sin(now * boxes[i].translXSpeed) * 0.5,
+            boxes[i].basePosition[1] + Math.sin(now * boxes[i].translYSpeed) * 0.5,
+            boxes[i].basePosition[2] + Math.sin(now * boxes[i].translZSpeed) * 0.5,
+        );
+
+    }
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
 
@@ -641,19 +707,33 @@ function animate(now) {
     // at this point all meshes have their material-materials assigned
     // ******* creating emission buffer ********
     for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].material.uniforms.uStep = 0;
+        culledScene.children[i].material.uniforms.uStep.value = 0;
+        culledScene.children[i].material.needsUpdate = true;
     }
     renderer.setRenderTarget(emissionRT);
     renderer.clear();
     renderer.render( culledScene, camera );
-
     // ---
-
     for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].material.uniforms.uStep = 0;
+        nonCulledScene.children[i].material.uniforms.uStep.value = 0;
+        nonCulledScene.children[i].material.needsUpdate = true;
     }
     renderer.render( nonCulledScene, camera );
 
+    // ******* creating albedo buffer ********
+    for(let i = 0; i < culledScene.children.length; i++) {
+        culledScene.children[i].material.uniforms.uStep.value = 1;
+        culledScene.children[i].material.needsUpdate = true;
+    }
+    renderer.setRenderTarget(albedoRT);
+    renderer.clear();
+    renderer.render( culledScene, camera );
+    // ---
+    for(let i = 0; i < nonCulledScene.children.length; i++) {
+        nonCulledScene.children[i].material.uniforms.uStep.value = 1;
+        nonCulledScene.children[i].material.needsUpdate = true;
+    }
+    renderer.render( nonCulledScene, camera );
 
 
 
@@ -773,6 +853,7 @@ function animate(now) {
     displayQuadMesh.material = displayMaterial;
     // displayQuadMesh.material.uniforms.uTexture.value = radianceRT.rt3.texture;
     displayQuadMesh.material.uniforms.uTexture.value = atrousRT.write.texture;
+    displayQuadMesh.material.uniforms.uExposure.value = controller.exposure;
     // if(kpress) {
     //     // displayQuadMesh.material.uniforms.uTexture.value = momentMoveRT.texture;
     //     // displayQuadMesh.material.uniforms.uTexture.value = normalRT.texture;
@@ -788,7 +869,8 @@ function animate(now) {
     if(ppress) displayQuadMesh.material.uniforms.uTexture.value = historyRT.rt3.texture;
     if(npress) displayQuadMesh.material.uniforms.uTexture.value = momentMoveRT.texture;
     if(mpress) displayQuadMesh.material.uniforms.uTexture.value = radianceRT.rt1.texture;
-    if(ipress) displayQuadMesh.material.uniforms.uTexture.value = materialRT.texture;
+    if(ipress) displayQuadMesh.material.uniforms.uTexture.value = emissionRT.texture;
+    if(bpress) displayQuadMesh.material.uniforms.uTexture.value = albedoRT.texture;
 
     renderer.clear();
     renderer.render(displayScene, camera);
@@ -811,13 +893,14 @@ function initGUI() {
 
         this.c_phiMultPerIt = 0.34;
 
-        this.stepMultiplier = 1.5;
+        this.stepMultiplier = 1.365;
         this.iterations = 10;
 
         this.atrous5x5 = false;
 
         this.maxFramesHistory = 10;
-        this.filterHistoryModulation = 0.54;
+        this.filterHistoryModulation = 0.0;
+        this.exposure = -1;
         this.spp = 1;
         this.mirrorIndex = 1;
 
@@ -939,6 +1022,7 @@ function initGUI() {
         atrousMaterial.needsUpdate = true;
     });
 
+    ptf.add(controller, 'exposure', -1, 10);
     ptf.add(controller, 'spp', 1, 10).step(1);
     ptf.add(controller, 'mirrorIndex', 1, 4).step(1);
 

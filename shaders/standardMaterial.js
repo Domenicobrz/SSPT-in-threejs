@@ -6,19 +6,18 @@ void main() {
 
 let standardMaterial_fs = `
 
-uniform vec3 uEmissive;
-uniform vec3 uColor;
+uniform vec3  uEmissive;
+uniform vec3  uAlbedo;
 uniform float uStep;
 
 void main() {
-
 
     if(uStep < 0.5) {
         // compute emissive mat
         gl_FragColor = vec4(uEmissive, 1.0);
     } else if (uStep > 0.5) {
         // compute albedo mat
-        gl_FragColor = vec4(uColor, 1.0);
+        gl_FragColor = vec4(uAlbedo, 1.0);
     }
 }
 `;
