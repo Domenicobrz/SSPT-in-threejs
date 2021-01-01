@@ -22,6 +22,7 @@ function makeSceneShaders() {
     uniform float uMirrorIndex;
     uniform vec4  uRandom;
 
+    uniform sampler2D uMaterialBuffer;
     uniform sampler2D uAlbedoBuffer;
     uniform sampler2D uPositionBuffer;
     uniform sampler2D uNormalBuffer;
@@ -121,6 +122,7 @@ function makeSceneShaders() {
         vec3 viewDir = rd;
 
 
+        vec3 matBuff      = texture2D(uMaterialBuffer, vUv).xyz;
         vec3 albedoBuff   = texture2D(uAlbedoBuffer, vUv).xyz;
         vec3 posBuff      = texture2D(uPositionBuffer, vUv).xyz;
         vec3 normBuff     = texture2D(uNormalBuffer, vUv).xyz;
@@ -188,7 +190,11 @@ function makeSceneShaders() {
         vec3 mult = vec3(1.0);
         float maxIntersectionDepthDistance = 0.5;
         ro = posBuff;
-        rd = sampleDiffuseHemisphere(normBuff, ro);
+        if(matBuff.x > 0.9) {   // if roughness > 0.9
+            rd = sampleDiffuseHemisphere(normBuff, ro);
+        } else {
+            rd = sampleGlossyHemisphere(normBuff, ro, rd);
+        }
         mult *= albedoBuff * max(dot(rd, normBuff), 0.0);
 
         for(int b = 0; b < bounces; b++) {

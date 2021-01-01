@@ -10,6 +10,7 @@ import { momentMove_fs, momentMove_vs } from "./shaders/momentMove.js";
 import { historyTest_fs, historyTest_vs, historyAccum_fs, historyAccum_vs } from "./shaders/history.js";
 import { radianceAccum_fs, radianceAccum_vs } from "./shaders/radianceAccum.js";
 import { standardMaterial_fs, standardMaterial_vs } from "./shaders/standardMaterial.js";
+import { createScene, updateScene } from "./scene.js";
 import * as dat from './dependencies/dat.gui.js';
 import Stats from "./dependencies/stats.js";
 
@@ -33,6 +34,9 @@ let radianceRT;
 let atrousRT;
 let momentMoveRT;
 let historyRT;
+let materialRT;
+let hrPositionRT;
+let hrNormalRT;
 
 let positionBufferMaterial;
 let materialBufferMaterial;
@@ -76,7 +80,7 @@ function init() {
     renderer.toneMappingExposure = 0.8;
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.autoClear = false;
-    renderer.setPixelRatio(pixelRatio);
+    // renderer.setPixelRatio(pixelRatio);
     document.body.appendChild( renderer.domElement );
 
     scene = new THREE.Scene();
@@ -101,42 +105,30 @@ function init() {
 
     let filterMode = THREE.NearestFilter;
 
+    hrPositionRT = new THREE.WebGLRenderTarget(innerWidth, innerHeight, {
+        magFilter: filterMode, minFilter: filterMode, type: THREE.FloatType, stencilBuffer: false,
+    });
+    hrNormalRT = new THREE.WebGLRenderTarget(innerWidth, innerHeight, {
+        magFilter: filterMode, minFilter: filterMode, type: THREE.FloatType, stencilBuffer: false,
+    });
     positionRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
-        magFilter: filterMode,
-        minFilter: filterMode,
-        type: THREE.FloatType,
-        stencilBuffer: false,
+        magFilter: filterMode, minFilter: filterMode, type: THREE.FloatType, stencilBuffer: false,
     });
-
     normalRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
-        magFilter: filterMode,
-        minFilter: filterMode,
-        type: THREE.FloatType,
-        stencilBuffer: false,
+        magFilter: filterMode, minFilter: filterMode, type: THREE.FloatType, stencilBuffer: false,
     });
-
     emissionRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
-        magFilter: filterMode,
-        minFilter: filterMode,
-        type: THREE.FloatType,
-        stencilBuffer: false,
+        magFilter: filterMode, minFilter: filterMode, type: THREE.FloatType, stencilBuffer: false,
     });
-
     albedoRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
-        magFilter: filterMode,
-        minFilter: filterMode,
-        type: THREE.FloatType,
-        stencilBuffer: false,
+        magFilter: filterMode, minFilter: filterMode, type: THREE.FloatType, stencilBuffer: false,
     });
-
+    materialRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
+        magFilter: filterMode, minFilter: filterMode, type: THREE.FloatType, stencilBuffer: false,
+    });
     momentMoveRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
-        magFilter: filterMode,
-        minFilter: filterMode,
-        type: THREE.FloatType,
-        stencilBuffer: false,
+        magFilter: filterMode, minFilter: filterMode, type: THREE.FloatType, stencilBuffer: false,
     }); 
-    
-
     atrousRT = createDoubleFBO(pr_width, pr_height, filterMode);
     historyRT = createTripleFBO(pr_width, pr_height, filterMode);
     radianceRT = createTripleFBO(pr_width, pr_height, filterMode);
@@ -178,6 +170,7 @@ function init() {
 
             "uMirrorIndex": { value: 1 },
 
+            "uMaterialBuffer": { type: "t", value: materialRT.texture },
             "uAlbedoBuffer":   { type: "t", value: albedoRT.texture },
             "uPositionBuffer": { type: "t", value: positionRT.texture },
             "uNormalBuffer":   { type: "t", value: normalRT.texture },
@@ -199,6 +192,7 @@ function init() {
             "atrous3x3": true,
         },
         uniforms: {
+            "uMaterial": { type: "t", value: materialRT.texture },
             "uRadiance": { type: "t", value: radianceRT.rt3.texture },
             "uNormal":   { type: "t",   value: normalRT.texture   },
             "uPosition": { type: "t", value: positionRT.texture },
@@ -258,6 +252,12 @@ function init() {
         uniforms: {
             "uTexture": { type: "t", value: radianceRT.rt3.texture },
             "uExposure": { value: -1 },
+            "uPRScreenSize": { value: new THREE.Vector2(pr_width, pr_height) },
+            
+            "uPosBuff":    { type: "t", value: positionRT.texture },
+            "uHrPosBuff":  { type: "t", value: hrPositionRT.texture },
+            "uNormBuff":   { type: "t", value: normalRT.texture },
+            "uHrNormBuff": { type: "t", value: hrNormalRT.texture },
         },
         fragmentShader: display_fs,
         vertexShader: display_vs,
@@ -265,105 +265,7 @@ function init() {
     });
 
 
-    let em = 10;
-    let emissiveTestMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-            "uEmissive": { value: new THREE.Vector3(0.5 * em, 0.5 * em, 0.5 * em) },
-            "uAlbedo": { value: new THREE.Vector3(1,1,1) },
-            "uStep": { value: 0 },
-        },
-        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
-    });
-
-    let emissiveTestMaterial2 = new THREE.ShaderMaterial({
-        uniforms: {
-            "uEmissive": { value: new THREE.Vector3(0.5 * em, 0.5 * em, 0.5 * em) },
-            "uAlbedo": { value: new THREE.Vector3(1,1,1) },
-            "uStep": { value: 0 },
-        },
-        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
-    });
-
-    let culledTestMaterial = new THREE.ShaderMaterial({
-        uniforms: {
-            "uEmissive": { value: new THREE.Vector3(0,0,0) },
-            "uAlbedo": { value: new THREE.Vector3(1,1,1) },
-            "uStep": { value: 0 },
-        },
-        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
-    });
-    
-   
-    
-    window.cornellBoxMesh  = new THREE.Mesh(new THREE.BoxBufferGeometry(10, 10, 10), culledTestMaterial);
-    culledScene.add(cornellBoxMesh);
-
-    window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(8, 0.1, 8), emissiveTestMaterial);
-    window.lightBoxMesh2   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 2, 2), emissiveTestMaterial2);
-    lightBoxMesh1.position.set(0, +4.9, 0);
-    lightBoxMesh2.position.set(-3, -3, 0);
-    nonCulledScene.add(lightBoxMesh1);
-
-
-    window.boxes = [];
-    for(let j = 0; j < 8; j++) {
-        let r = 1; //Math.random();
-        let g = 1; //Math.random();
-        let b = 1; //Math.random();
-
-        let testMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-                "uEmissive": { value: new THREE.Vector3(0,0,0) },
-                "uAlbedo": { value: new THREE.Vector3(r,g,b) },
-                "uStep": { value: 0 },
-            },
-            fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
-        });
-
-        for(let i = 0; i < 4; i++) {
-            let size = Math.random() * 1.5 + 0.15;
-            let box = new THREE.Mesh(new THREE.BoxBufferGeometry(size, size, size), testMaterial);
-            box.position.set(
-                (Math.random() * 2 - 1) * 5,
-                (Math.random() * 2 - 1) * 3 - 2,
-                (Math.random() * 2 - 1) * 5,
-            );
-            nonCulledScene.add(box);
-            box.rotXSpeed    = Math.pow(Math.random(), 2.0) * 0.02;
-            box.rotYSpeed    = Math.pow(Math.random(), 2.0) * 0.02;
-            box.rotZSpeed    = Math.pow(Math.random(), 2.0) * 0.02;
-            
-            box.translXSpeed = Math.random() * 0.02;
-            box.translYSpeed = Math.random() * 0.02;
-            box.translZSpeed = Math.random() * 0.02;
-
-            box.basePosition = [box.position.x, box.position.y, box.position.z];
-            boxes.push(box);
-        }
-    }
-
-    let cornellBRedMat = new THREE.ShaderMaterial({ uniforms: { "uEmissive": { value: new THREE.Vector3(0,0,0) },
-            "uAlbedo": { value: new THREE.Vector3(1,0.1,0.2) }, "uStep": { value: 0 },
-        }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
-    });
-    let cornellBGreenMat = new THREE.ShaderMaterial({ uniforms: { "uEmissive": { value: new THREE.Vector3(0,0,0) },
-            "uAlbedo": { value: new THREE.Vector3(0.1,1,0.2) }, "uStep": { value: 0 },
-        }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
-    });
-    let cbox1 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), cornellBGreenMat);
-    cbox1.position.set(+4.975, 0, 0);
-    cbox1.rotation.y = Math.PI * 0.5;
-    culledScene.add(cbox1);
-    
-    let cbox2 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), cornellBRedMat);
-    cbox2.position.set(-4.975, 0, 0);
-    cbox2.rotation.y = -Math.PI * 0.5;
-    culledScene.add(cbox2);
-
-
-
-
-
+    createScene(culledScene, nonCulledScene);
 
 
     window.addEventListener("keydown", (e) => {
@@ -500,45 +402,7 @@ function animate(now) {
     controls.update();
 
 
-
-
-    // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
-    // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].oldWorldMatrix = culledScene.children[i].matrixWorld.clone();
-    }
-    for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].oldWorldMatrix = nonCulledScene.children[i].matrixWorld.clone();
-    }
-
-    // lightBoxMesh1.rotateX(0.06);
-    // lightBoxMesh1.rotateY(0.03);
-    // lightBoxMesh1.rotateZ(0.02);
-    // lightBoxMesh1.position.set(-3, Math.cos(now * 0.3) * 3, -3);
-    // lightBoxMesh1.updateMatrixWorld();
-    
-    // lightBoxMesh2.rotateX(0.03);
-    // lightBoxMesh2.rotateY(0.02);
-    // lightBoxMesh2.rotateZ(0.01);
-    // lightBoxMesh2.position.set(+3, Math.cos(now * 0.5) * 3, +3);
-    // lightBoxMesh2.updateMatrixWorld();
-
-    for(let i = 0; i < boxes.length; i++) {
-        boxes[i].rotateX(boxes[i].rotXSpeed);
-        boxes[i].rotateY(boxes[i].rotYSpeed);
-        boxes[i].rotateZ(boxes[i].rotZSpeed);
-        
-        boxes[i].position.set(
-            boxes[i].basePosition[0] + Math.sin(now * boxes[i].translXSpeed) * 0.5,
-            boxes[i].basePosition[1] + Math.sin(now * boxes[i].translYSpeed) * 0.5,
-            boxes[i].basePosition[2] + Math.sin(now * boxes[i].translZSpeed) * 0.5,
-        );
-
-    }
-    // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
-    // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
-
-
+    updateScene(now, culledScene, nonCulledScene);
 
 
     // we need to create moment buffers BEFORE we update normal/position RTs
@@ -677,6 +541,10 @@ function animate(now) {
     renderer.clear();
     renderer.render( culledScene, camera );
 
+    renderer.setRenderTarget(hrPositionRT);
+    renderer.clear();
+    renderer.render( culledScene, camera );
+
     for(let i = 0; i < culledScene.children.length; i++) {
         culledScene.children[i].material = culledScene.children[i].savedMaterial;
     }
@@ -690,6 +558,10 @@ function animate(now) {
         nonCulledScene.children[i].material = positionBufferMaterial;
     }
 
+    renderer.setRenderTarget(positionRT);
+    renderer.render( nonCulledScene, camera );
+
+    renderer.setRenderTarget(hrPositionRT);
     renderer.render( nonCulledScene, camera );
 
     for(let i = 0; i < nonCulledScene.children.length; i++) {
@@ -708,7 +580,6 @@ function animate(now) {
     // ******* creating emission buffer ********
     for(let i = 0; i < culledScene.children.length; i++) {
         culledScene.children[i].material.uniforms.uStep.value = 0;
-        culledScene.children[i].material.needsUpdate = true;
     }
     renderer.setRenderTarget(emissionRT);
     renderer.clear();
@@ -716,14 +587,12 @@ function animate(now) {
     // ---
     for(let i = 0; i < nonCulledScene.children.length; i++) {
         nonCulledScene.children[i].material.uniforms.uStep.value = 0;
-        nonCulledScene.children[i].material.needsUpdate = true;
     }
     renderer.render( nonCulledScene, camera );
 
     // ******* creating albedo buffer ********
     for(let i = 0; i < culledScene.children.length; i++) {
         culledScene.children[i].material.uniforms.uStep.value = 1;
-        culledScene.children[i].material.needsUpdate = true;
     }
     renderer.setRenderTarget(albedoRT);
     renderer.clear();
@@ -731,10 +600,20 @@ function animate(now) {
     // ---
     for(let i = 0; i < nonCulledScene.children.length; i++) {
         nonCulledScene.children[i].material.uniforms.uStep.value = 1;
-        nonCulledScene.children[i].material.needsUpdate = true;
     }
     renderer.render( nonCulledScene, camera );
-
+    // ******* creating material buffer ********
+    for(let i = 0; i < culledScene.children.length; i++) {
+        culledScene.children[i].material.uniforms.uStep.value = 2;
+    }
+    renderer.setRenderTarget(materialRT);
+    renderer.clear();
+    renderer.render( culledScene, camera );
+    // ---
+    for(let i = 0; i < nonCulledScene.children.length; i++) {
+        nonCulledScene.children[i].material.uniforms.uStep.value = 2;
+    }
+    renderer.render( nonCulledScene, camera );
 
 
 
@@ -755,6 +634,10 @@ function animate(now) {
     renderer.clear();
     renderer.render( culledScene, camera );
 
+    renderer.setRenderTarget(hrNormalRT);
+    renderer.clear();
+    renderer.render( culledScene, camera );
+
     for(let i = 0; i < culledScene.children.length; i++) {
         culledScene.children[i].material = culledScene.children[i].savedMaterial;
     }
@@ -768,6 +651,10 @@ function animate(now) {
         nonCulledScene.children[i].material = normalBufferMaterial;
     }
 
+    renderer.setRenderTarget(normalRT);
+    renderer.render( nonCulledScene, camera );
+
+    renderer.setRenderTarget(hrNormalRT);
     renderer.render( nonCulledScene, camera );
 
     for(let i = 0; i < nonCulledScene.children.length; i++) {
@@ -869,7 +756,7 @@ function animate(now) {
     if(ppress) displayQuadMesh.material.uniforms.uTexture.value = historyRT.rt3.texture;
     if(npress) displayQuadMesh.material.uniforms.uTexture.value = momentMoveRT.texture;
     if(mpress) displayQuadMesh.material.uniforms.uTexture.value = radianceRT.rt1.texture;
-    if(ipress) displayQuadMesh.material.uniforms.uTexture.value = emissionRT.texture;
+    if(ipress) displayQuadMesh.material.uniforms.uTexture.value = hrNormalRT.texture;
     if(bpress) displayQuadMesh.material.uniforms.uTexture.value = albedoRT.texture;
 
     renderer.clear();
