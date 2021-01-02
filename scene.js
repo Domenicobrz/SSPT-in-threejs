@@ -86,12 +86,12 @@ function createScene(culledScene, nonCulledScene) {
         }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
     });
     let cbox1 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), cornellBRedMat);
-    cbox1.position.set(+4.975, 0, 0);
+    cbox1.position.set(+4.9975, 0, 0);
     cbox1.rotation.y = Math.PI * 0.5;
     culledScene.add(cbox1);
     
     let cbox2 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), cornellBGreenMat);
-    cbox2.position.set(-4.975, 0, 0);
+    cbox2.position.set(-4.9975, 0, 0);
     cbox2.rotation.y = -Math.PI * 0.5;
     culledScene.add(cbox2);
 

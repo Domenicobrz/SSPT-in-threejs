@@ -63,7 +63,7 @@ let mpress;
 let ipress;
 let bpress;
 
-let pixelRatio = 0.35;
+let pixelRatio = 0.5;
 let pr_width   = Math.floor(innerWidth  * pixelRatio);
 let pr_height  = Math.floor(innerHeight * pixelRatio);
 

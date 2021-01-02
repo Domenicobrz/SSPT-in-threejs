@@ -98,6 +98,12 @@ void main() {
         vec4 t = cval - ctmp;
         float dist2 = dot(t,t);
         float c_w = min(exp(-(dist2)/c_phi), 1.0);
+        // c_w = 1.0;
+        // c_w = 1.0;
+        // c_w = 1.0;
+        // c_w = 1.0;
+        // c_w = 1.0;
+        // c_w = 1.0;
 
         vec4 ntmp = texture2D(uNormal, uv);
         t = nval - ntmp;
