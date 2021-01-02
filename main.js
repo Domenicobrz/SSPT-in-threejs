@@ -943,7 +943,7 @@ function initGUI() {
         atrousMaterial.needsUpdate = true;
     });
 
-    ptf.add(controller, 'exposure', -1, 10);
+    ptf.add(controller, 'exposure', -10, 10);
     ptf.add(controller, 'spp', 1, 15).step(1);
     ptf.add(controller, 'mirrorIndex', 1, 4).step(1);
 

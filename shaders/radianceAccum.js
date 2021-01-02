@@ -22,7 +22,7 @@ void main() {
     vec2 reprojUVOffs = texture2D(uMomentMoveBuffer, vUv).xy;
 
     vec3 newRad = texture2D(uCurrentRadiance, vUv).xyz;
-    vec3 accumulatedRad = texture2D(uAccumulatedRadiance, vUv + reprojUVOffs).xyz;
+    vec4 accumulatedRad = texture2D(uAccumulatedRadiance, vUv + reprojUVOffs);
 
 
     float maxFrames = uMaxFramesHistory;
@@ -39,9 +39,14 @@ void main() {
 
     // // // lambda *= 0.5;
 
-    vec3 updatedAccum = newRad * lambda + accumulatedRad * (1.0 - lambda);
+    float div = accumulatedRad.w;
+    vec3 updatedAccum = newRad + accumulatedRad.xyz;
 
-    gl_FragColor = vec4(updatedAccum, 1.0);
+    gl_FragColor = vec4(updatedAccum, div + 1.0);
+
+    if(history < 1.0) {
+        gl_FragColor = vec4(newRad + accumulatedRad.xyz * 0.333, div * 0.333 + 1.0);
+    }
 }
 `;
 

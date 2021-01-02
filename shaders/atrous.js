@@ -66,6 +66,7 @@ void main() {
     vec2 step  = vec2(1./uScreenSize.x, 1./uScreenSize.y);
     vec2 hstep = step * 0.0;
     vec4 cval = texture2D(uRadiance, vUv.st + hstep);
+    cval /= cval.w;
     vec4 nval = texture2D(uNormal,   vUv.st + hstep);
     vec4 pval = texture2D(uPosition, vUv.st + hstep);
 
@@ -95,15 +96,16 @@ void main() {
         vec2 uv = vUv.st + hstep + offs[i] * step * stepwidth;
 
         vec4 ctmp = texture2D(uRadiance, uv);
+        ctmp /= ctmp.w;
         vec4 t = cval - ctmp;
         float dist2 = dot(t,t);
         float c_w = min(exp(-(dist2)/c_phi), 1.0);
-        // c_w = 1.0;
-        // c_w = 1.0;
-        // c_w = 1.0;
-        // c_w = 1.0;
-        // c_w = 1.0;
-        // c_w = 1.0;
+        c_w = 1.0;
+        c_w = 1.0;
+        c_w = 1.0;
+        c_w = 1.0;
+        c_w = 1.0;
+        c_w = 1.0;
 
         vec4 ntmp = texture2D(uNormal, uv);
         t = nval - ntmp;
