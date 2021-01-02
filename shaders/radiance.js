@@ -185,6 +185,13 @@ function makeSceneShaders() {
                 // const int steps = 40;
                 // const int binarySteps = 6;
                 // const int bounces = 3;
+
+                // very quality
+                // float startingStep = 0.05;
+                // float stepMult = 1.09;
+                // const int steps = 80;
+                // const int binarySteps = 10;
+                // const int bounces = 3;
             // **** quality params - END
 
         vec3 mult = vec3(1.0);
@@ -281,6 +288,7 @@ function makeSceneShaders() {
                         // intersection is invalid
                         // gl_FragColor = vec4(0.0, 1.0, 0.5, 1.0);
                         // return;
+                        continue;
                     }
 
                     break;

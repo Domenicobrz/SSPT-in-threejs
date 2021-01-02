@@ -10,6 +10,7 @@ import { momentMove_fs, momentMove_vs } from "./shaders/momentMove.js";
 import { historyTest_fs, historyTest_vs, historyAccum_fs, historyAccum_vs } from "./shaders/history.js";
 import { radianceAccum_fs, radianceAccum_vs } from "./shaders/radianceAccum.js";
 import { standardMaterial_fs, standardMaterial_vs } from "./shaders/standardMaterial.js";
+import { feedbackloop_fs, feedbackloop_vs } from "./shaders/feedbackloop.js";
 import { createScene, updateScene } from "./scene.js";
 import * as dat from './dependencies/dat.gui.js';
 import Stats from "./dependencies/stats.js";
@@ -47,6 +48,7 @@ let historyTestMaterial;
 let historyAccumMaterial;
 let radianceAccumMaterial;
 let atrousMaterial;
+let feedbackLoopMaterial;
 
 let displayQuadMesh;
 let mesh;
@@ -61,7 +63,7 @@ let mpress;
 let ipress;
 let bpress;
 
-let pixelRatio = 0.5;
+let pixelRatio = 0.35;
 let pr_width   = Math.floor(innerWidth  * pixelRatio);
 let pr_height  = Math.floor(innerHeight * pixelRatio);
 
@@ -245,6 +247,19 @@ function init() {
         },
         fragmentShader: radianceAccum_fs,
         vertexShader: radianceAccum_vs,
+        side: THREE.DoubleSide,
+    });
+
+    feedbackLoopMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            "uHistory": { type: "t",  value: null },
+            "uRadianceAccumRT": { type: "t",  value: null },
+            "uAtrousRT": { type: "t", value: null },
+            "uFeedbackLoopFactor": { value: 0 },
+            "uMaxFramesHistory": { value: 0 },
+        },
+        fragmentShader: feedbackloop_fs,
+        vertexShader: feedbackloop_vs,
         side: THREE.DoubleSide,
     });
 
@@ -735,6 +750,23 @@ function animate(now) {
 
 
 
+    // ***********  feedback loop between atrous & radianceRT
+    radianceRT.swap_rt2_rt3();
+    renderer.setRenderTarget(radianceRT.rt3);
+    renderer.clear();
+    displayQuadMesh.material = feedbackLoopMaterial;
+    feedbackLoopMaterial.uniforms.uHistory.value = historyRT.rt3.texture;
+    feedbackLoopMaterial.uniforms.uRadianceAccumRT.value = radianceRT.rt2.texture;
+    feedbackLoopMaterial.uniforms.uAtrousRT.value = atrousRT.write.texture;
+    feedbackLoopMaterial.uniforms.uFeedbackLoopFactor.value = controller.feedbackLoopFactor;
+    feedbackLoopMaterial.uniforms.uMaxFramesHistory.value = controller.maxFramesHistory;
+    renderer.render(displayScene, camera);
+    // ***********  feedback loop between atrous & radianceRT - END
+    
+
+
+
+
 
     renderer.setRenderTarget(null);
     displayQuadMesh.material = displayMaterial;
@@ -776,9 +808,9 @@ function initGUI() {
     var GUIcontroller = function() {
         this.c_phi = 105;
         this.n_phi = 0.01;
-        this.p_phi = 1;
+        this.p_phi = 0.2;
 
-        this.c_phiMultPerIt = 0.34;
+        this.c_phiMultPerIt = 1;
 
         this.stepMultiplier = 1.365;
         this.iterations = 10;
@@ -786,7 +818,8 @@ function initGUI() {
         this.atrous5x5 = false;
 
         this.maxFramesHistory = 10;
-        this.filterHistoryModulation = 0.0;
+        this.filterHistoryModulation = 0.5;
+        this.feedbackLoopFactor = 0;
         this.exposure = -1;
         this.spp = 1;
         this.mirrorIndex = 1;
@@ -892,9 +925,10 @@ function initGUI() {
     wff.add(controller, 'p_phi', 0, 30).onChange(function(value) {
         atrousMaterial.uniforms.uP_phi.value = value;
     }); 
-    wff.add(controller, 'c_phiMultPerIt', 0, 1);
+    wff.add(controller, 'c_phiMultPerIt', 0, 4);
     wff.add(controller, 'stepMultiplier', 0, 5);
-    wff.add(controller, 'iterations', 0, 10).step(1);
+    wff.add(controller, 'iterations', 0, 20).step(1);
+    wff.add(controller, 'feedbackLoopFactor', 0, 1);
     wff.add(controller, 'atrous5x5').onChange(function(value) {
         if(value) {
             atrousMaterial.defines = {
@@ -910,7 +944,7 @@ function initGUI() {
     });
 
     ptf.add(controller, 'exposure', -1, 10);
-    ptf.add(controller, 'spp', 1, 10).step(1);
+    ptf.add(controller, 'spp', 1, 15).step(1);
     ptf.add(controller, 'mirrorIndex', 1, 4).step(1);
 
     rpf.add(controller, 'maxFramesHistory', 0, 100).step(1);

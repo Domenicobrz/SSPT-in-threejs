@@ -109,7 +109,10 @@ void main() {
         dist2 = dot(t,t);
         float p_w = min(exp(-(dist2)/p_phi), 1.0);
 
+        // float htmp = texture2D(uHistoryAccum, uv).x;
+        // float h_w = ((htmp + 1.0) / uMaxFramesHistory) * c_phi;
 
+        // float weight = c_w * n_w * p_w * h_w;
         float weight = c_w * n_w * p_w;
         sum += ctmp * weight * kernel[i];
 

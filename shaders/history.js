@@ -94,7 +94,7 @@ void main() {
     vec3 normal = normalize(vNormal);
 
 
-    if(dot(oldNormal, normal) < 0.9) success = vec3(0.0);
+    if(dot(oldNormal, normal) < 0.8) success = vec3(0.0);
     if(length(oldWorldPosition - vWorldFragPos) > 0.25) success = vec3(0.0);
 
     gl_FragColor = vec4(success, 1.0);

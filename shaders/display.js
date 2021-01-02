@@ -46,7 +46,7 @@ void main() {
     vec2 prStepSize = vec2(1.0 / uPRScreenSize.x, 1.0 / uPRScreenSize.y);
     vec2 bestFitUvs = vUv;
     float bestFit = 0.0;
-    float p_phi = 0.01;
+    float p_phi = 0.05;
     float n_phi = 0.01;
 
     vec2 offs[9];
@@ -65,12 +65,6 @@ void main() {
         float dist2 = dot(t,t);
         float c_w = min(exp(-(dist2)/p_phi), 1.0);
         
-        c_w = 0.0;
-        c_w = 0.0;
-        c_w = 0.0;
-        c_w = 0.0;
-        c_w = 0.0;
-
         t = hrNorm - prNorm;
         dist2 = max(dot(t,t), 0.0);
         float n_w = min(exp(-(dist2)/n_phi), 1.0);
@@ -80,25 +74,6 @@ void main() {
             bestFitUvs = sampleUv;
         }
     }
-
-    // // if(vUv.x > 0.737 && vUv.y < 0.55) {
-        gl_FragColor = vec4(texture2D(uNormBuff, vUv).xyz, 1.0);
-        // gl_FragColor = vec4(hrNorm, 1.0);
-        // gl_FragColor = texture2D(uTexture, vUv);
-        // gl_FragColor = vec4(texture2D(uHrNormBuff, bestFitUvs).xyz, 1.0);
-        // return;
-    // // }
-
-    // gl_FragColor = vec4(bestFit, bestFit, bestFit, 1.0);
-    // gl_FragColor = vec4(bestFit, bestFitUvs, 1.0);   
-    // return;
-
-
-
-
-
-
-
 
 
 

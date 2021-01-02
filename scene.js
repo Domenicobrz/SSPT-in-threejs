@@ -1,21 +1,13 @@
 import * as THREE from "./dependencies/three.module.js";
 import { standardMaterial_fs, standardMaterial_vs } from "./shaders/standardMaterial.js";
+import { OBJLoader } from "./dependencies/OBJLoader.js";
 
 function createScene(culledScene, nonCulledScene) {
     let em = 10;
     let emissiveTestMaterial = new THREE.ShaderMaterial({
         uniforms: {
-            "uEmissive": { value: new THREE.Vector3(0.5 * em, 0.4 * em, 0.3 * em) },
-            "uAlbedo": { value: new THREE.Vector3(1,1,1) },
-            "uRoughness": { value: 1 },
-            "uStep": { value: 0 },
-        },
-        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
-    });
-
-    let emissiveTestMaterial2 = new THREE.ShaderMaterial({
-        uniforms: {
-            "uEmissive": { value: new THREE.Vector3(0.5 * em, 0.5 * em, 0.5 * em) },
+            // "uEmissive": { value: new THREE.Vector3(0.5 * em, 0.4 * em, 0.3 * em) },
+            "uEmissive": { value: new THREE.Vector3(0.5 * em, 0.3 * em, 0.1 * em) },
             "uAlbedo": { value: new THREE.Vector3(1,1,1) },
             "uRoughness": { value: 1 },
             "uStep": { value: 0 },
@@ -38,6 +30,7 @@ function createScene(culledScene, nonCulledScene) {
     window.cornellBoxMesh  = new THREE.Mesh(new THREE.BoxBufferGeometry(10, 10, 10), culledTestMaterial);
     culledScene.add(cornellBoxMesh);
 
+    // window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 0.1, 2), emissiveTestMaterial);
     window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(8, 0.1, 8), emissiveTestMaterial);
     lightBoxMesh1.position.set(0, +4.9, 0);
     // window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(0.1, 5, 5), emissiveTestMaterial);
@@ -63,11 +56,11 @@ function createScene(culledScene, nonCulledScene) {
         });
 
         for(let i = 0; i < 2; i++) {
-            let size = Math.random() * 1.5 + 0.15;
+            let size = Math.random() * 0.8 + 0.15;
             let box = new THREE.Mesh(new THREE.BoxBufferGeometry(size, size, size), testMaterial);
             box.position.set(
                 (Math.random() * 2 - 1) * 5,
-                (Math.random() * 2 - 1) * 3 - 2,
+                (Math.random() * 2 - 1) * 1.5 - 3,
                 (Math.random() * 2 - 1) * 5,
             );
             nonCulledScene.add(box);
@@ -101,6 +94,43 @@ function createScene(culledScene, nonCulledScene) {
     cbox2.position.set(-4.975, 0, 0);
     cbox2.rotation.y = -Math.PI * 0.5;
     culledScene.add(cbox2);
+
+
+
+
+    const loader = new OBJLoader();
+
+    // load a resource
+    loader.load(
+        // resource URL
+        'assets/models/archangel2.obj',
+        // called when resource is loaded
+        function ( object ) {
+            let mesh = object.children[0];
+            mesh.material = new THREE.ShaderMaterial({ uniforms: { 
+                    "uEmissive": { value: new THREE.Vector3(0,0,0) },
+                    "uAlbedo": { value: new THREE.Vector3(1,1,1) }, 
+                    "uStep": { value: 0 }, 
+                    "uRoughness": { value: 1 },
+                }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+            });
+            // mesh.scale.set(3, 3, 3);
+            mesh.position.set(0, -5, -3);
+            // mesh.geometry.computeVertexNormals();
+
+            // mesh = new THREE.Mesh(new THREE.SphereBufferGeometry(3, 20, 20), mesh.material);
+
+            nonCulledScene.add( mesh );
+        },
+        // called when loading is in progresses
+        function ( xhr ) {
+            console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+        },
+        // called when loading has errors
+        function ( error ) {
+            console.log( 'An error happened' );
+        }
+    );
 }
 
 function updateScene(now, culledScene, nonCulledScene) {
