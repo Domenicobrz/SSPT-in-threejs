@@ -18,6 +18,9 @@ function makeSceneShaders() {
     uniform vec3  uCameraTarget;
     uniform float uAspectRatio;
     uniform float uRadMult;
+    uniform float uTotSamples;
+    uniform float uCurrSample;
+    uniform float uLowHistorySamples;
     uniform float uTime;
     uniform float uMirrorIndex;
     uniform vec4  uRandom;
@@ -27,6 +30,7 @@ function makeSceneShaders() {
     uniform sampler2D uPositionBuffer;
     uniform sampler2D uNormalBuffer;
     uniform sampler2D uEmissionBuffer;
+    uniform sampler2D uHistoryBuffer;
 
     varying vec2 vUv;
     varying mat4 vProjViewModelMatrix;
@@ -127,7 +131,25 @@ function makeSceneShaders() {
         vec3 posBuff      = texture2D(uPositionBuffer, vUv).xyz;
         vec3 normBuff     = texture2D(uNormalBuffer, vUv).xyz;
         vec3 emissionBuff = texture2D(uEmissionBuffer, vUv).xyz;
+        vec3 historyBuff  = texture2D(uHistoryBuffer, vUv).xyz;
         if(dot(rd, normBuff) > 0.0) normBuff = -normBuff;
+
+
+        float radMult = 1.0 / uTotSamples;
+
+        if(uLowHistorySamples > 0.5) {
+            radMult = 1.0 / (uTotSamples);
+            
+            if(historyBuff.x > 3.0) {
+                radMult = 1.0 / (uTotSamples - uLowHistorySamples);
+    
+                if(uCurrSample > uTotSamples - uLowHistorySamples) {
+                    gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+                    return;
+                }
+            }
+        }
+
 
         // why posBuff minus rd ?
         // remember: the wall's front-faces are culled!
@@ -141,7 +163,7 @@ function makeSceneShaders() {
         }
 
         if(length(emissionBuff) > 0.0) {
-            gl_FragColor = vec4(emissionBuff, 1.0) * uRadMult;
+            gl_FragColor = vec4(emissionBuff, 1.0) * radMult;
             return;   
         }
 
@@ -158,6 +180,26 @@ function makeSceneShaders() {
 
         // ************ try screen-space intersection, if we can find something output red ************
             // **** quality params
+
+
+                // float startingStep = 0.01;
+                // float stepMult = 1.08;
+                // const int steps = 50;
+                // const int binarySteps = 10;
+                // const int bounces = 3;
+
+                // float startingStep = 0.05;
+                // float stepMult = 1.25;
+                // const int steps = 20;
+                // const int binarySteps = 5;
+                // const int bounces = 3;
+
+
+
+
+
+
+
                 // desperate quality
                 // float startingStep = 0.05;
                 // float stepMult = 1.75;
@@ -296,7 +338,7 @@ function makeSceneShaders() {
             }
         }
 
-        gl_FragColor = vec4(radiance * uRadMult, 1.0);
+        gl_FragColor = vec4(radiance * radMult, 1.0);
         return;
         // ************ try screen-space intersection, if we can find something output red ************
     }

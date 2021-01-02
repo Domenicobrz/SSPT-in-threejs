@@ -164,6 +164,9 @@ function init() {
     radianceBufferMaterial = new THREE.ShaderMaterial({
         uniforms: {
             "uRadMult":    { value: 1 },
+            "uTotSamples": { value: 1 },
+            "uCurrSample": { value: 1 },
+            "uLowHistorySamples": { value: 1 },
             "uCameraPos":    { value: camera.position },
             "uCameraTarget": { value: controls.target },
             "uAspectRatio": { value: pr_width / pr_height },
@@ -172,6 +175,7 @@ function init() {
 
             "uMirrorIndex": { value: 1 },
 
+            "uHistoryBuffer":  { type: "t", value: historyRT.rt3.texture },
             "uMaterialBuffer": { type: "t", value: materialRT.texture },
             "uAlbedoBuffer":   { type: "t", value: albedoRT.texture },
             "uPositionBuffer": { type: "t", value: positionRT.texture },
@@ -685,9 +689,12 @@ function animate(now) {
 
     renderer.setRenderTarget(radianceRT.rt1);
     renderer.clear();
-    for(let i = 0; i < controller.spp; i++) {
+    for(let i = 0; i < controller.spp + controller.lowhsspp; i++) {
         renderer.setRenderTarget(radianceRT.rt1);
-        radianceBufferMaterial.uniforms.uRadMult.value = 1 / (controller.spp);
+        // radianceBufferMaterial.uniforms.uRadMult.value    = 1 / (controller.spp);
+        radianceBufferMaterial.uniforms.uTotSamples.value = (controller.spp + controller.lowhsspp);
+        radianceBufferMaterial.uniforms.uCurrSample.value = i;
+        radianceBufferMaterial.uniforms.uLowHistorySamples.value = controller.lowhsspp;
         radianceBufferMaterial.uniforms.uCameraPos.value = camera.position;
         radianceBufferMaterial.uniforms.uCameraTarget.value = controls.target;
         radianceBufferMaterial.uniforms.uRandom.value = new THREE.Vector4(Math.random(), Math.random(), Math.random(), Math.random());
@@ -817,11 +824,12 @@ function initGUI() {
 
         this.atrous5x5 = false;
 
-        this.maxFramesHistory = 10;
+        this.maxFramesHistory = 7;
         this.filterHistoryModulation = 0.5;
         this.feedbackLoopFactor = 0;
         this.exposure = -1;
         this.spp = 1;
+        this.lowhsspp = 0;
         this.mirrorIndex = 1;
 
         this.lowQuality = function() {
@@ -943,11 +951,12 @@ function initGUI() {
         atrousMaterial.needsUpdate = true;
     });
 
-    ptf.add(controller, 'exposure', -1, 10);
+    ptf.add(controller, 'exposure', -10, 10);
     ptf.add(controller, 'spp', 1, 15).step(1);
+    ptf.add(controller, 'lowhsspp', 0, 10).step(1);
     ptf.add(controller, 'mirrorIndex', 1, 4).step(1);
 
-    rpf.add(controller, 'maxFramesHistory', 0, 100).step(1);
+    rpf.add(controller, 'maxFramesHistory', 0, 20).step(1);
     rpf.add(controller, 'filterHistoryModulation', 0, 1);
 
     qpf.add(controller, 'lowQuality');

@@ -37,7 +37,7 @@ void main() {
     // float lambda = (((maxFrames+0.05) - history) / (maxFrames+0.05));
     float lambda = (((maxFrames+0.2) - history) / (maxFrames+0.2));
 
-    // // // lambda *= 0.5;
+    // lambda *= 0.6;
 
     vec3 updatedAccum = newRad * lambda + accumulatedRad * (1.0 - lambda);
 

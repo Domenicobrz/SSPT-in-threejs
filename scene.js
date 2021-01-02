@@ -40,8 +40,8 @@ function createScene(culledScene, nonCulledScene) {
     window.boxes = [];
     for(let j = 0; j < 40; j++) {
         let r = Math.random();
-        let g = Math.random();
-        let b = Math.random();
+        let g = r; // Math.random();
+        let b = r; // Math.random();
 
         let roughnss = Math.random() > 0.75 ? 0 : 1;
         let emss     = Math.random() > 0.9 ? new THREE.Vector3(r * em,g * em,b * em) : new THREE.Vector3(0,0,0); 
@@ -103,7 +103,7 @@ function createScene(culledScene, nonCulledScene) {
     // load a resource
     loader.load(
         // resource URL
-        'assets/models/archangel2.obj',
+        'assets/models/archangel3.obj',
         // called when resource is loaded
         function ( object ) {
             let mesh = object.children[0];
