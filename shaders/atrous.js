@@ -9,10 +9,10 @@ void main() {
 
 let atrous_fs = `varying vec2 vUv;
 
+uniform sampler2D uMaterial;
 uniform sampler2D uRadiance;
 uniform sampler2D uPosition;
 uniform sampler2D uNormal;
-uniform sampler2D uMaterial;
 uniform sampler2D uHistoryAccum;
 uniform float uFilterHistoryModulation;
 uniform float uMaxFramesHistory;
@@ -84,10 +84,10 @@ void main() {
     stepwidth *= 1.0 - (1.0 - (uMaxFramesHistory - clampedHistory) / uMaxFramesHistory) * uFilterHistoryModulation;
     // stepwidth *= history >= uMaxFramesHistory * 4.0 ? 0.0 : 1.0;
 
-    // // **************** mirror-like materials
-    // vec4 material = texture2D(uMaterial, vUv.st + hstep);
-    // if(material.w == 3.0) stepwidth *= 0.75;
-    // // **************** mirror-like materials
+    // **************** mirror-like materials
+    vec4 material = texture2D(uMaterial, vUv.st + hstep);
+    if(material.x < 0.9) stepwidth *= 0.5;
+    // **************** mirror-like materials
 
 
     float cum_w = 0.0;
@@ -98,6 +98,12 @@ void main() {
         vec4 t = cval - ctmp;
         float dist2 = dot(t,t);
         float c_w = min(exp(-(dist2)/c_phi), 1.0);
+        // c_w = 1.0;
+        // c_w = 1.0;
+        // c_w = 1.0;
+        // c_w = 1.0;
+        // c_w = 1.0;
+        // c_w = 1.0;
 
         vec4 ntmp = texture2D(uNormal, uv);
         t = nval - ntmp;
@@ -109,7 +115,10 @@ void main() {
         dist2 = dot(t,t);
         float p_w = min(exp(-(dist2)/p_phi), 1.0);
 
+        // float htmp = texture2D(uHistoryAccum, uv).x;
+        // float h_w = ((htmp + 1.0) / uMaxFramesHistory) * c_phi;
 
+        // float weight = c_w * n_w * p_w * h_w;
         float weight = c_w * n_w * p_w;
         sum += ctmp * weight * kernel[i];
 

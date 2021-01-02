@@ -1,4 +1,4 @@
-function makeSceneShaders(tot_triangles) {
+function makeSceneShaders() {
     
     window.radiance_vs = `
     varying vec2 vUv;
@@ -22,9 +22,11 @@ function makeSceneShaders(tot_triangles) {
     uniform float uMirrorIndex;
     uniform vec4  uRandom;
 
+    uniform sampler2D uMaterialBuffer;
+    uniform sampler2D uAlbedoBuffer;
     uniform sampler2D uPositionBuffer;
     uniform sampler2D uNormalBuffer;
-    uniform sampler2D uMaterialBuffer;
+    uniform sampler2D uEmissionBuffer;
 
     varying vec2 vUv;
     varying mat4 vProjViewModelMatrix;
@@ -120,9 +122,11 @@ function makeSceneShaders(tot_triangles) {
         vec3 viewDir = rd;
 
 
-        vec3 posBuff  = texture2D(uPositionBuffer, vUv).xyz;
-        vec3 normBuff = texture2D(uNormalBuffer, vUv).xyz;
-        vec3 matBuff  = texture2D(uMaterialBuffer, vUv).xyz;
+        vec3 matBuff      = texture2D(uMaterialBuffer, vUv).xyz;
+        vec3 albedoBuff   = texture2D(uAlbedoBuffer, vUv).xyz;
+        vec3 posBuff      = texture2D(uPositionBuffer, vUv).xyz;
+        vec3 normBuff     = texture2D(uNormalBuffer, vUv).xyz;
+        vec3 emissionBuff = texture2D(uEmissionBuffer, vUv).xyz;
         if(dot(rd, normBuff) > 0.0) normBuff = -normBuff;
 
         // why posBuff minus rd ?
@@ -136,12 +140,8 @@ function makeSceneShaders(tot_triangles) {
             return;
         }
 
-        if(matBuff.x > 14.5) {
-            gl_FragColor = vec4(1.0, 6.0, 1.0, 1.0) * uRadMult;
-            return;   
-        }
-        if(matBuff.x > 13.5) {
-            gl_FragColor = vec4(6.0, 1.0, 1.0, 1.0) * uRadMult;
+        if(length(emissionBuff) > 0.0) {
+            gl_FragColor = vec4(emissionBuff, 1.0) * uRadMult;
             return;   
         }
 
@@ -158,24 +158,51 @@ function makeSceneShaders(tot_triangles) {
 
         // ************ try screen-space intersection, if we can find something output red ************
             // **** quality params
+                // desperate quality
+                // float startingStep = 0.05;
+                // float stepMult = 1.75;
+                // const int steps = 20;
+                // const int binarySteps = 5;
+                // const int bounces = 2;
+
+                // low quality
                 // float startingStep = 0.05;
                 // float stepMult = 1.25;
                 // const int steps = 20;
                 // const int binarySteps = 5;
                 // const int bounces = 3;
 
+                // medium quality
                 float startingStep = 0.05;
-                float stepMult = 1.12;
-                const int steps = 40;
-                const int binarySteps = 6;
+                float stepMult = 1.165;
+                const int steps = 30;
+                const int binarySteps = 5;
                 const int bounces = 3;
+
+                // high quality
+                // float startingStep = 0.05;
+                // float stepMult = 1.12;
+                // const int steps = 40;
+                // const int binarySteps = 6;
+                // const int bounces = 3;
+
+                // very quality
+                // float startingStep = 0.05;
+                // float stepMult = 1.09;
+                // const int steps = 80;
+                // const int binarySteps = 10;
+                // const int bounces = 3;
             // **** quality params - END
 
         vec3 mult = vec3(1.0);
         float maxIntersectionDepthDistance = 0.5;
         ro = posBuff;
-        rd = sampleDiffuseHemisphere(normBuff, ro);
-        mult *= max(dot(rd, normBuff), 0.0);
+        if(matBuff.x > 0.9) {   // if roughness > 0.9
+            rd = sampleDiffuseHemisphere(normBuff, ro);
+        } else {
+            rd = sampleGlossyHemisphere(normBuff, ro, rd);
+        }
+        mult *= albedoBuff * max(dot(rd, normBuff), 0.0);
 
         for(int b = 0; b < bounces; b++) {
             vec3 p = ro;
@@ -242,28 +269,26 @@ function makeSceneShaders(tot_triangles) {
                     float distanceFromCameraAtP2 = length(p2 - uCameraPos);
                     if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance) {
                         // intersection validated
-                        // get normal & material at p2
+                        // get normal & emission at p2
                         vec4 projP2 = vProjViewModelMatrix * vec4(p2, 1.0);
                         vec2 p2Uv = (projP2 / projP2.w).xy * 0.5 + 0.5;
-                        vec4 imaterial = texture2D(uMaterialBuffer, p2Uv);
+                        vec4 iemission = texture2D(uEmissionBuffer, p2Uv);
                         vec3 inormal   = texture2D(uNormalBuffer, p2Uv).xyz;
+                        vec3 ialbedo   = texture2D(uAlbedoBuffer, p2Uv).xyz;
                         if(dot(inormal, rd) > 0.0) inormal = -inormal;
 
-                        if(imaterial.x > 14.5) {
-                            radiance += vec3(1.0, 6.0, 1.0) * mult;
-                        } else if (imaterial.x > 13.5) {
-                            radiance += vec3(6.0, 1.0, 1.0) * mult;
-                        }
+                        radiance += iemission.xyz * mult;
 
                         ro = p1;
                         rd = sampleDiffuseHemisphere(inormal, ro);
                         ro = ro + rd * 0.95;
-                        mult *= max(dot(rd, inormal), 0.0);
+                        mult *= ialbedo * max(dot(rd, inormal), 0.0);
 
                     } else {
                         // intersection is invalid
                         // gl_FragColor = vec4(0.0, 1.0, 0.5, 1.0);
                         // return;
+                        continue;
                     }
 
                     break;

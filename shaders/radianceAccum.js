@@ -33,11 +33,11 @@ void main() {
     // WILL be lower if we accumulate more than $maxFrames samples (the variance reduction
     // stops at around 2 * $maxFrames samples, that's why the atrous filter multiplies
     // the clamped history by 0.5
-    float lambda = (((maxFrames+1.0) - history) / (maxFrames+1.0));
+    // float lambda = (((maxFrames+1.0) - history) / (maxFrames+1.0));
+    // float lambda = (((maxFrames+0.05) - history) / (maxFrames+0.05));
+    float lambda = (((maxFrames+0.2) - history) / (maxFrames+0.2));
 
-
-    // float material = texture2D(uMaterialBuffer, vUv).w;
-    // lambda = material == 3.0 ? 0.1 : lambda;
+    // // // lambda *= 0.5;
 
     vec3 updatedAccum = newRad * lambda + accumulatedRad * (1.0 - lambda);
 
