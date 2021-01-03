@@ -26,6 +26,7 @@ let renderer;
 let pmremGenerator;
 let hdrCubeRenderTarget;
 let HDRtexture;
+let radianceFrameCount = 0;
 
 let albedoRT;
 let positionRT;
@@ -172,6 +173,7 @@ function init() {
             "uAspectRatio": { value: pr_width / pr_height },
             "uRandom": { value: new THREE.Vector4(0, 0, 0, 0) },
             "uTime": { value: 0 },
+            "uFrame": { value: 0 },
 
             "uMirrorIndex": { value: 1 },
 
@@ -210,6 +212,7 @@ function init() {
             "uC_phi": { value: 0.0 },
             "uN_phi": { value: 0.0 },
             "uP_phi": { value: 0.0 },
+            "uH_phi": { value: 0.0 },
         },
         fragmentShader: atrous_fs,
         vertexShader: atrous_vs,
@@ -220,6 +223,7 @@ function init() {
         uniforms: {
             "uNormalBuffer":   { type: "t", value: normalRT.texture   },
             "uPositionBuffer": { type: "t", value: positionRT.texture },
+            "uRadianceBuffer": { type: "t", value: radianceRT.rt3.texture },
             "uMomentMove":     { type: "t", value: momentMoveRT.texture },
             "uCameraPos":      { type: "t", value: camera.position },
             "uInvScreenSize":  { value: new THREE.Vector2(1 / pr_width, 1 / pr_height) },
@@ -248,6 +252,7 @@ function init() {
             "uHistoryBuffer": { type: "t", value: null },
             "uMomentMoveBuffer": { type: "t", value: null },
             "uMaxFramesHistory": { type: "t", value: null },
+            "uRadianceLambdaFix": { value: 0 },
         },
         fragmentShader: radianceAccum_fs,
         vertexShader: radianceAccum_vs,
@@ -699,9 +704,12 @@ function animate(now) {
         radianceBufferMaterial.uniforms.uCameraTarget.value = controls.target;
         radianceBufferMaterial.uniforms.uRandom.value = new THREE.Vector4(Math.random(), Math.random(), Math.random(), Math.random());
         radianceBufferMaterial.uniforms.uTime.value = now;
+        radianceBufferMaterial.uniforms.uFrame.value = radianceFrameCount % 256;
         radianceBufferMaterial.uniforms.uMirrorIndex.value = controller.mirrorIndex;
         displayQuadMesh.material = radianceBufferMaterial;
         renderer.render(displayScene, camera );
+
+        radianceFrameCount++;
     }
         // ************** accumulating radiance 
         radianceRT.swap_rt2_rt3();
@@ -714,6 +722,7 @@ function animate(now) {
         radianceAccumMaterial.uniforms.uHistoryBuffer.value = historyRT.rt3.texture;
         radianceAccumMaterial.uniforms.uMomentMoveBuffer.value = momentMoveRT.texture;
         radianceAccumMaterial.uniforms.uMaxFramesHistory.value = controller.maxFramesHistory;
+        radianceAccumMaterial.uniforms.uRadianceLambdaFix.value = controller.radianceLambdaFix_;
         renderer.render(displayScene, camera );
         // ************** accumulating radiance - END
 
@@ -727,6 +736,7 @@ function animate(now) {
     atrousMaterial.uniforms.uN_phi.value = controller.n_phi;
     atrousMaterial.uniforms.uP_phi.value = controller.p_phi;
     atrousMaterial.uniforms.uC_phi.value = controller.c_phi;
+    atrousMaterial.uniforms.uH_phi.value = controller.h_phi;
 
     renderer.setRenderTarget(atrousRT.write);
     atrousMaterial.uniforms.uRadiance.value = radianceRT.rt3.texture;
@@ -816,6 +826,7 @@ function initGUI() {
         this.c_phi = 105;
         this.n_phi = 0.01;
         this.p_phi = 0.2;
+        this.h_phi = 1;
 
         this.c_phiMultPerIt = 1;
 
@@ -831,6 +842,9 @@ function initGUI() {
         this.spp = 1;
         this.lowhsspp = 0;
         this.mirrorIndex = 1;
+
+        this.radianceLambdaFix_ = false;
+        this.radianceLambdaFix = false;
 
         this.lowQuality = function() {
             this.spp = 1;
@@ -927,11 +941,14 @@ function initGUI() {
     wff.add(controller, 'c_phi', 0, 2000).onChange(function(value) {
         atrousMaterial.uniforms.uC_phi.value = value;
     });
-    wff.add(controller, 'n_phi', 0.01, 30).onChange(function(value) {
+    wff.add(controller, 'n_phi', 0.001, 30).onChange(function(value) {
         atrousMaterial.uniforms.uN_phi.value = value;
     }); 
     wff.add(controller, 'p_phi', 0, 30).onChange(function(value) {
         atrousMaterial.uniforms.uP_phi.value = value;
+    }); 
+    wff.add(controller, 'h_phi', 0, 30).onChange(function(value) {
+        atrousMaterial.uniforms.uH_phi.value = value;
     }); 
     wff.add(controller, 'c_phiMultPerIt', 0, 4);
     wff.add(controller, 'stepMultiplier', 0, 5);
@@ -958,6 +975,9 @@ function initGUI() {
 
     rpf.add(controller, 'maxFramesHistory', 0, 20).step(1);
     rpf.add(controller, 'filterHistoryModulation', 0, 1);
+    rpf.add(controller, 'radianceLambdaFix').onChange(() => {
+        controller.radianceLambdaFix_ = controller.radianceLambdaFix ? 1 : 0;
+    });
 
     qpf.add(controller, 'lowQuality');
     qpf.add(controller, 'mediumQuality');

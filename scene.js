@@ -98,12 +98,21 @@ function createScene(culledScene, nonCulledScene) {
 
 
 
+
+    // let cbox3 = new THREE.Mesh(new THREE.BoxBufferGeometry(0.2, 0.2, 0.2), cornellBRedMat);
+    // culledScene.add(cbox3);
+
+
+
+
+
+
     const loader = new OBJLoader();
 
     // load a resource
     loader.load(
         // resource URL
-        'assets/models/archangel3.obj',
+        'assets/models/archangel2.obj',
         // called when resource is loaded
         function ( object ) {
             let mesh = object.children[0];

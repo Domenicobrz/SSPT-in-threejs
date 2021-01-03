@@ -21,6 +21,7 @@ uniform vec2  uScreenSize;
 uniform float uC_phi;
 uniform float uN_phi;
 uniform float uP_phi;
+uniform float uH_phi;
 
 
 void main() {
@@ -60,6 +61,7 @@ void main() {
     float c_phi = uC_phi;
     float n_phi = uN_phi;
     float p_phi = uP_phi;
+    float h_phi = uH_phi;
     float stepwidth = uStep;
 
     vec4 sum = vec4(0.0);
@@ -68,6 +70,10 @@ void main() {
     vec4 cval = texture2D(uRadiance, vUv.st + hstep);
     vec4 nval = texture2D(uNormal,   vUv.st + hstep);
     vec4 pval = texture2D(uPosition, vUv.st + hstep);
+    if(pval == vec4(0.0, 0.0, 0.0, 0.0)) {
+        return;
+    }
+    vec4 hval = texture2D(uHistoryAccum, vUv.st + hstep);
 
 
     float history = texture2D(uHistoryAccum, vUv.st + hstep).x;
@@ -90,6 +96,12 @@ void main() {
     // **************** mirror-like materials
 
 
+    // float aggressivity = clamp(1.0 - ((hval.x) / uMaxFramesHistory), 0.1, 1.0) * 4.0; 
+    // // if the history is low, be less aggressive with the restrictions
+    // n_phi *= aggressivity;
+    // p_phi *= aggressivity;
+
+
     float cum_w = 0.0;
     for(int i = 0; i < loopSteps; i++) {
         vec2 uv = vUv.st + hstep + offs[i] * step * stepwidth;
@@ -98,12 +110,6 @@ void main() {
         vec4 t = cval - ctmp;
         float dist2 = dot(t,t);
         float c_w = min(exp(-(dist2)/c_phi), 1.0);
-        c_w = 1.0;
-        c_w = 1.0;
-        c_w = 1.0;
-        c_w = 1.0;
-        c_w = 1.0;
-        c_w = 1.0;
 
         vec4 ntmp = texture2D(uNormal, uv);
         t = nval - ntmp;
@@ -116,7 +122,7 @@ void main() {
         float p_w = min(exp(-(dist2)/p_phi), 1.0);
 
         // float htmp = texture2D(uHistoryAccum, uv).x;
-        // float h_w = ((htmp + 1.0) / uMaxFramesHistory) * c_phi;
+        // float h_w = ((htmp + 1.0) / uMaxFramesHistory) * h_phi;
 
         // float weight = c_w * n_w * p_w * h_w;
         float weight = c_w * n_w * p_w;

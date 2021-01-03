@@ -76,6 +76,7 @@ varying vec3 vNormal;
 
 uniform sampler2D uNormalBuffer;
 uniform sampler2D uPositionBuffer;
+uniform sampler2D uRadianceBuffer;
 uniform sampler2D uMomentMove;
 uniform vec2 uInvScreenSize;
 
@@ -89,13 +90,16 @@ void main() {
     // reprojection test
     vec2 olduv = uv + texture2D(uMomentMove, uv).xy;
     vec3 oldNormal = texture2D(uNormalBuffer, olduv).xyz;
+    vec3 oldRadiance = texture2D(uRadianceBuffer, olduv).xyz;
     vec3 oldWorldPosition = texture2D(uPositionBuffer, olduv).xyz;
 
     vec3 normal = normalize(vNormal);
+    vec3 radiance = texture2D(uRadianceBuffer, uv).xyz;
 
 
-    if(dot(oldNormal, normal) < 0.8) success = vec3(0.0);
+    if(dot(oldNormal, normal) < 0.85) success = vec3(0.0);
     if(length(oldWorldPosition - vWorldFragPos) > 0.25) success = vec3(0.0);
+    // if(length(oldRadiance - radiance) > 0.35) success = vec3(0.0);
 
     gl_FragColor = vec4(success, 1.0);
 }

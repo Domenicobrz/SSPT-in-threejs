@@ -16,6 +16,7 @@ uniform sampler2D uHistoryBuffer;
 uniform sampler2D uMomentMoveBuffer;
 
 uniform float uMaxFramesHistory; 
+uniform float uRadianceLambdaFix; 
 
 void main() {
 
@@ -35,9 +36,96 @@ void main() {
     // the clamped history by 0.5
     // float lambda = (((maxFrames+1.0) - history) / (maxFrames+1.0));
     // float lambda = (((maxFrames+0.05) - history) / (maxFrames+0.05));
+    // float lambda = (((maxFrames+2.2) - history) / (maxFrames+2.2));
     float lambda = (((maxFrames+0.2) - history) / (maxFrames+0.2));
 
-    // lambda *= 0.6;
+    if(uRadianceLambdaFix > 0.5) {
+        
+        
+        // if(history < 0.5) {
+        //     lambda *= 0.3;
+        // } else if (history > 1.5) {
+        //     lambda *= 0.35;
+        // } else if (history > 3.5) {
+        //     lambda *= 0.5;
+        // } else if (history > 5.5) {
+        //     lambda *= 0.75;
+        // } else if (history > 10.5) {
+        //     lambda *= 0.85;
+        // }
+
+
+
+        // if(history < 0.5) {
+        //     lambda *= 0.2;
+        // } else if (history > 1.5) {
+        //     lambda *= 0.3;
+        // } else if (history > 3.5) {
+        //     lambda *= 0.4;
+        // } else if (history > 5.5) {
+        //     lambda *= 0.65;
+        // } else if (history > 7.5) {
+        //     lambda *= 0.75;
+        // } else if (history > 10.5) {
+        //     lambda *= 0.85;
+        // } else if (history > 13.5) {
+        //     lambda *= 1.0;
+        // }
+
+
+
+        // if(history < 0.5) {
+        //     lambda *= 0.15;
+        // } else if (history > 1.5) {
+        //     lambda *= 0.25;
+        // } else if (history > 4.5) {
+        //     lambda *= 0.4;
+        // } else if (history > 7.5) {
+        //     lambda *= 0.75;
+        // } else if (history > 9.5) {
+        //     lambda *= 0.75;
+        // } else if (history > 12.5) {
+        //     lambda *= 0.85;
+        // } else if (history > 13.5) {
+        //     lambda *= 1.0;
+        // }
+
+
+
+        
+
+        // if(history < 0.5) {
+        //     lambda *= 0.25;
+        // } else if (history > 1.5) {
+        //     lambda *= 0.3;
+        // } else if (history > 3.5) {
+        //     lambda *= 0.475;
+        // } else if (history > 5.5) {
+        //     lambda *= 0.75;
+        // } else if (history > 6.5) {
+        //     lambda *= 1.0;
+        // } 
+
+
+
+          
+        if(history < 0.5) {
+            lambda *= 0.3;
+        } else if (history > 1.5) {
+            lambda *= 0.35;
+        } else if (history > 3.5) {
+            lambda *= 0.65;
+        } else if (history > 5.5) {
+            lambda *= 0.8;
+        } else if (history > 6.5) {
+            lambda *= 1.0;
+        }
+    
+
+        // lambda = clamp(pow(lambda, 3.35) * 0.85,    0.05, 1.0);
+
+
+    }
 
     vec3 updatedAccum = newRad * lambda + accumulatedRad * (1.0 - lambda);
 

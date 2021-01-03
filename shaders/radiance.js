@@ -1,5 +1,5 @@
 function makeSceneShaders() {
-    
+
     window.radiance_vs = `
     varying vec2 vUv;
     varying mat4 vProjViewModelMatrix;
@@ -23,6 +23,7 @@ function makeSceneShaders() {
     uniform float uLowHistorySamples;
     uniform float uTime;
     uniform float uMirrorIndex;
+    uniform float uFrame;
     uniform vec4  uRandom;
 
     uniform sampler2D uMaterialBuffer;
@@ -46,19 +47,19 @@ function makeSceneShaders() {
         return fract((p3.x + p3.y) * p3.z);
     }
 
-    //  3 out, 3 in...
-    vec3 hash33(vec3 p3)
-    {
-    	p3 = fract(p3 * vec3(.1031, .1030, .0973));
-        p3 += dot(p3, p3.yxz+33.33);
-        return fract((p3.xxy + p3.yxx)*p3.zyx);
+    // //  3 out, 3 in...
+    // vec3 hash33(vec3 p3)
+    // {
+    // 	p3 = fract(p3 * vec3(.1031, .1030, .0973));
+    //     p3 += dot(p3, p3.yxz+33.33);
+    //     return fract((p3.xxy + p3.yxx)*p3.zyx);
 
-    }
+    // }
 
     vec3 sampleDiffuseHemisphere(vec3 normal, vec3 pos) {
         float theta = 2.0 * PI * rand(pos * 100.0 + uRandom.x * 127.0);
         float phi = acos(2.0 * rand(pos * 100.0 + uRandom.y * 127.0) - 1.0);
-
+       
         vec3 unitSphereSample = vec3(
             cos(theta) * sin(phi),
             sin(theta) * sin(phi),
@@ -90,7 +91,7 @@ function makeSceneShaders() {
         vec2 pNdc = (projP / projP.w).xy;
         vec2 pUv  = pNdc * 0.5 + 0.5;
         vec3 positionAtPointP = texture2D(uPositionBuffer, pUv).xyz;
-        if(positionAtPointP == vec3(0.0)) positionAtPointP = uCameraPos + viewDir * 9999999.0; 
+        if(positionAtPointP == vec3(0.0)) positionAtPointP = uCameraPos + viewDir * 9999999.0;
 
         return positionAtPointP;
     }
@@ -139,10 +140,10 @@ function makeSceneShaders() {
 
         if(uLowHistorySamples > 0.5) {
             radMult = 1.0 / (uTotSamples);
-            
+
             if(historyBuff.x > 3.0) {
                 radMult = 1.0 / (uTotSamples - uLowHistorySamples);
-    
+
                 if(uCurrSample > uTotSamples - uLowHistorySamples) {
                     gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
                     return;
@@ -164,7 +165,7 @@ function makeSceneShaders() {
 
         if(length(emissionBuff) > 0.0) {
             gl_FragColor = vec4(emissionBuff, 1.0) * radMult;
-            return;   
+            return;
         }
 
 
@@ -188,12 +189,21 @@ function makeSceneShaders() {
                 // const int binarySteps = 10;
                 // const int bounces = 3;
 
-                // float startingStep = 0.05;
-                // float stepMult = 1.25;
-                // const int steps = 20;
+                // float startingStep = 0.1;
+                // float stepMult = 1.5;
+                // const int steps = 15;
+                // const int binarySteps = 5;
+                // const int bounces = 2;
+                // float jitt_a = 0.3;
+                // float jitt_b = 0.7;
+
+                // float startingStep = 0.1;
+                // float stepMult = 1.375;
+                // const int steps = 12;
                 // const int binarySteps = 5;
                 // const int bounces = 3;
-
+                // float jitt_a = 0.65;
+                // float jitt_b = 0.35;
 
 
 
@@ -201,18 +211,24 @@ function makeSceneShaders() {
 
 
                 // desperate quality
-                // float startingStep = 0.05;
-                // float stepMult = 1.75;
-                // const int steps = 20;
-                // const int binarySteps = 5;
-                // const int bounces = 2;
-
-                // low quality
-                // float startingStep = 0.05;
-                // float stepMult = 1.25;
-                // const int steps = 20;
+                // float startingStep = 0.1;
+                // float stepMult = 1.375;
+                // const int steps = 12;
                 // const int binarySteps = 5;
                 // const int bounces = 3;
+                // float jitt_a = 0.65;
+                // float jitt_b = 0.35;
+
+
+                // low quality
+                // float startingStep = 0.1;
+                // float stepMult = 1.265;
+                // const int steps = 15;
+                // const int binarySteps = 5;
+                // const int bounces = 3;
+                // float jitt_a = 0.75;
+                // float jitt_b = 0.25;
+
 
                 // medium quality
                 float startingStep = 0.05;
@@ -220,6 +236,8 @@ function makeSceneShaders() {
                 const int steps = 30;
                 const int binarySteps = 5;
                 const int bounces = 3;
+                float jitt_a = 0.75;
+                float jitt_b = 0.25;
 
                 // high quality
                 // float startingStep = 0.05;
@@ -227,6 +245,8 @@ function makeSceneShaders() {
                 // const int steps = 40;
                 // const int binarySteps = 6;
                 // const int bounces = 3;
+                // float jitt_a = 0.75;
+                // float jitt_b = 0.25;
 
                 // very quality
                 // float startingStep = 0.05;
@@ -234,7 +254,10 @@ function makeSceneShaders() {
                 // const int steps = 80;
                 // const int binarySteps = 10;
                 // const int bounces = 3;
+                // float jitt_a = 0.75;
+                // float jitt_b = 0.25;
             // **** quality params - END
+
 
         vec3 mult = vec3(1.0);
         float maxIntersectionDepthDistance = 0.5;
@@ -253,14 +276,14 @@ function makeSceneShaders() {
             for(int i = 0; i < steps; i++) {
                 vec3 initialP = p;
                 // jittered step increase, can probably use a much better solution
-                p += rd * (step * 0.75 + step * 0.25); //rand(p) * 0.25);
+                p += rd * (step * jitt_a + step * jitt_b); //rand(p) * 0.25);
                 step *= stepMult;
 
                 vec4 projP = vProjViewModelMatrix * vec4(p, 1.0);
                 vec2 pNdc = (projP / projP.w).xy;
                 vec2 pUv  = pNdc * 0.5 + 0.5;
                 vec3 positionAtPointP = texture2D(uPositionBuffer, pUv).xyz;
-                if(positionAtPointP == vec3(0.0)) positionAtPointP = uCameraPos + viewDir * 9999999.0; 
+                if(positionAtPointP == vec3(0.0)) positionAtPointP = uCameraPos + viewDir * 9999999.0;
                 float distanceFromCameraAtP = length(p - uCameraPos);
 
                 // we need to be careful about rays that go "behind" the camera, if they go far enough
@@ -296,7 +319,7 @@ function makeSceneShaders() {
                             // if statement, it would be possible that it's value would be very large (e.g. if p1 intersected the "background"
                             // since in that case positionBufferAtP() returns viewDir * 99999999.0)
                             // and if that value is very large, it can create artifacts when evaluating this condition:
-                            // ---> if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance) 
+                            // ---> if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance)
                             // to be honest though, these artifacts only appear for largerish values of maxIntersectionDepthDistance
 
                             lastRecordedPosBuffThatIntersected = distanceFromCameraAtPosBuff;
