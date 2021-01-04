@@ -1,5 +1,6 @@
 import * as THREE from "./dependencies/three.module.js";
 import { standardMaterial_fs, standardMaterial_vs } from "./shaders/standardMaterial.js";
+import { litStatueMaterial_fs, litStatueMaterial_vs } from "./shaders/litStatueMaterial.js";
 import { OBJLoader } from "./dependencies/OBJLoader.js";
 
 function createScene(culledScene, nonCulledScene) {
@@ -24,6 +25,15 @@ function createScene(culledScene, nonCulledScene) {
         },
         fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
     });
+
+    let perlinNoiseEmissiveMaterial = new THREE.ShaderMaterial({ uniforms: { 
+            "uEmissive": { value: new THREE.Vector3(0,0,0) },
+            "uAlbedo": { value: new THREE.Vector3(1,1,1) }, 
+            "uStep": { value: 0 }, 
+            "uTime": { value: 0 }, 
+            "uRoughness": { value: 0 },
+        }, fragmentShader: litStatueMaterial_fs, vertexShader: litStatueMaterial_vs, side: THREE.DoubleSide,
+    });
     
    
     
@@ -31,20 +41,24 @@ function createScene(culledScene, nonCulledScene) {
     culledScene.add(cornellBoxMesh);
 
     // window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 0.1, 2), emissiveTestMaterial);
-    window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(8, 0.1, 8), emissiveTestMaterial);
-    lightBoxMesh1.position.set(0, +4.9, 0);
     // window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(0.1, 5, 5), emissiveTestMaterial);
     // lightBoxMesh1.position.set(-4.9, -2, 0);
+    window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(8, 0.1, 8), emissiveTestMaterial);
+    lightBoxMesh1.position.set(0, +4.9, 0);
     nonCulledScene.add(lightBoxMesh1);
 
+
+
+
     window.boxes = [];
-    for(let j = 0; j < 40; j++) {
+    for(let j = 0; j < 80; j++) {
         let r = Math.random();
-        let g = r; // Math.random();
-        let b = r; // Math.random();
+        let g = r * 0.6 + Math.random() * 0.4; // Math.random();
+        let b = r * 0.6 + Math.random() * 0.4; // Math.random();
 
         let roughnss = Math.random() > 0.75 ? 0 : 1;
-        let emss     = Math.random() > 0.9 ? new THREE.Vector3(r * em,g * em,b * em) : new THREE.Vector3(0,0,0); 
+        let emss     = Math.random() > 0.95 ? new THREE.Vector3(r * em,g * em,b * em) : new THREE.Vector3(0,0,0); 
+        // let emss     = new THREE.Vector3(0,0,0);  
         let testMaterial = new THREE.ShaderMaterial({
             uniforms: {
                 "uEmissive": { value: emss },
@@ -60,10 +74,9 @@ function createScene(culledScene, nonCulledScene) {
             let box = new THREE.Mesh(new THREE.BoxBufferGeometry(size, size, size), testMaterial);
             box.position.set(
                 (Math.random() * 2 - 1) * 5,
-                (Math.random() * 2 - 1) * 1.5 - 3,
+                (Math.pow(Math.random(), 4.0) * 3.5) - 4.5,
                 (Math.random() * 2 - 1) * 5,
             );
-            nonCulledScene.add(box);
             box.rotXSpeed    = Math.pow(Math.random(), 2.0) * 0.02;
             box.rotYSpeed    = Math.pow(Math.random(), 2.0) * 0.02;
             box.rotZSpeed    = Math.pow(Math.random(), 2.0) * 0.02;
@@ -74,6 +87,8 @@ function createScene(culledScene, nonCulledScene) {
     
             box.basePosition = [box.position.x, box.position.y, box.position.z];
             boxes.push(box);
+
+            nonCulledScene.add(box);
         }
     }
 
@@ -85,25 +100,19 @@ function createScene(culledScene, nonCulledScene) {
             "uAlbedo": { value: new THREE.Vector3(0.1,1,0.2) }, "uStep": { value: 0 }, "uRoughness": { value: 1 },
         }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
     });
-    let cbox1 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), cornellBRedMat);
+    window.cbox1 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), cornellBRedMat);
     cbox1.position.set(+4.9975, 0, 0);
     cbox1.rotation.y = Math.PI * 0.5;
     culledScene.add(cbox1);
     
-    let cbox2 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), cornellBGreenMat);
+    window.cbox2 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), cornellBGreenMat);
     cbox2.position.set(-4.9975, 0, 0);
     cbox2.rotation.y = -Math.PI * 0.5;
     culledScene.add(cbox2);
 
 
-
-
-
-    // let cbox3 = new THREE.Mesh(new THREE.BoxBufferGeometry(0.2, 0.2, 0.2), cornellBRedMat);
-    // culledScene.add(cbox3);
-
-
-
+    // cbox2.material = perlinNoiseEmissiveMaterial;
+    // perlinNoiseEmissiveMaterial.side = THREE.BackSide;
 
 
 
@@ -115,21 +124,64 @@ function createScene(culledScene, nonCulledScene) {
         'assets/models/archangel2.obj',
         // called when resource is loaded
         function ( object ) {
+            // let mesh = object.children[0];
+            // mesh.material = new THREE.ShaderMaterial({ uniforms: { 
+            //         "uEmissive": { value: new THREE.Vector3(0,0,0) },
+            //         "uAlbedo": { value: new THREE.Vector3(1,1,1) }, 
+            //         "uStep": { value: 0 }, 
+            //         "uRoughness": { value: 0 },
+            //     }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+            // });
+            // mesh.position.set(0, -5, -3);
+            // nonCulledScene.add( mesh );
+
+
+
+            // let mesh2 = mesh.clone();
+            // mesh2.material = new THREE.ShaderMaterial({ uniforms: { 
+            //         "uEmissive": { value: new THREE.Vector3(0,0,0) },
+            //         "uAlbedo": { value: new THREE.Vector3(1,1,1) }, 
+            //         "uStep": { value: 0 }, 
+            //         "uRoughness": { value: 1 },
+            //     }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+            // });
+            // mesh2.position.set(3, -5, -3);
+            // nonCulledScene.add( mesh2 );
+
+
+
+
+
+
+
             let mesh = object.children[0];
+            window.mesh2 = mesh.clone();
+
+
             mesh.material = new THREE.ShaderMaterial({ uniforms: { 
                     "uEmissive": { value: new THREE.Vector3(0,0,0) },
                     "uAlbedo": { value: new THREE.Vector3(1,1,1) }, 
                     "uStep": { value: 0 }, 
-                    "uRoughness": { value: 1 },
-                }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+                    "uRoughness": { value: 0 },
+                }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
             });
-            // mesh.scale.set(3, 3, 3);
-            mesh.position.set(0, -5, -3);
-            // mesh.geometry.computeVertexNormals();
-
-            // mesh = new THREE.Mesh(new THREE.SphereBufferGeometry(3, 20, 20), mesh.material);
-
+            mesh.rotateY(-0.635);
+            mesh.scale.set(-1, 1, 1);
+            mesh.position.set(-2, -5, -3);
             nonCulledScene.add( mesh );
+
+
+            mesh2.material = new THREE.ShaderMaterial({ uniforms: { 
+                    "uEmissive": { value: new THREE.Vector3(0,0,0) },
+                    "uAlbedo": { value: new THREE.Vector3(1,1,1) }, 
+                    "uStep": { value: 0 }, 
+                    "uRoughness": { value: 1 },
+                }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
+            });
+            // mesh2.material = perlinNoiseEmissiveMaterial
+            mesh2.rotateY(+0.635);
+            mesh2.position.set(+2, -5, -3);
+            nonCulledScene.add( mesh2 );
         },
         // called when loading is in progresses
         function ( xhr ) {
@@ -181,6 +233,11 @@ function updateScene(now, culledScene, nonCulledScene) {
         );
         boxes[i].updateMatrixWorld();
     }
+
+
+
+    // cbox2.material.uniforms.uTime.value = now;
+    // mesh2.material.uniforms.uTime.value = now;
 }
 
 export { createScene, updateScene };

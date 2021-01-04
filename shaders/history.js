@@ -97,8 +97,8 @@ void main() {
     vec3 radiance = texture2D(uRadianceBuffer, uv).xyz;
 
 
-    if(dot(oldNormal, normal) < 0.85) success = vec3(0.0);
-    if(length(oldWorldPosition - vWorldFragPos) > 0.25) success = vec3(0.0);
+    if(dot(oldNormal, normal) < 0.94) success = vec3(0.0);
+    if(length(oldWorldPosition - vWorldFragPos) > 0.175) success = vec3(0.0);
     // if(length(oldRadiance - radiance) > 0.35) success = vec3(0.0);
 
     gl_FragColor = vec4(success, 1.0);

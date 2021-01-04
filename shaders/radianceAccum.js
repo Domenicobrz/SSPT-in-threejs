@@ -110,20 +110,17 @@ void main() {
 
           
         if(history < 0.5) {
-            lambda *= 0.3;
-        } else if (history > 1.5) {
-            lambda *= 0.35;
-        } else if (history > 3.5) {
-            lambda *= 0.65;
-        } else if (history > 5.5) {
-            lambda *= 0.8;
-        } else if (history > 6.5) {
-            lambda *= 1.0;
-        }
-    
+            lambda *= 0.25;
+        } else if (history < 1.5) {
+            lambda *= 0.55;
+        } 
+        // else if (history < 3.5) {
+        //     lambda *= 0.75;
+        // } else if (history < 4.5) {
+        //     lambda *= 0.8;
+        // } 
 
-        // lambda = clamp(pow(lambda, 3.35) * 0.85,    0.05, 1.0);
-
+        // lambda *= 0.5;
 
     }
 

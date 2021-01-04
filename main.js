@@ -264,6 +264,7 @@ function init() {
             "uHistory": { type: "t",  value: null },
             "uRadianceAccumRT": { type: "t",  value: null },
             "uAtrousRT": { type: "t", value: null },
+            "uMaterial": { type: "t", value: materialRT.texture },
             "uFeedbackLoopFactor": { value: 0 },
             "uMaxFramesHistory": { value: 0 },
         },
@@ -846,70 +847,52 @@ function initGUI() {
         this.radianceLambdaFix_ = false;
         this.radianceLambdaFix = false;
 
-        this.lowQuality = function() {
-            this.spp = 1;
-            this.iterations = 7;
-            this.filterHistoryModulation = 0.37;
-            this.stepMultiplier = 1.7;
-            this.atrous5x5 = false;
-            this.maxFramesHistory = 10;
-            this.c_phiMultPerIt = 0.34;
+        this.test1 = function() {
             this.c_phi = 105;
-            this.n_phi = 0.01;
-            this.p_phi = 1;
-
-            this.updateGUI();
-        };  
-
-        this.mediumQuality = function() {
-            this.spp = 2;
-            this.iterations = 8;
-            this.c_phiMultPerIt = 0.36;
-            this.filterHistoryModulation = 0.42;
-            this.stepMultiplier = 1.6;
-            this.c_phi = 105;
-            this.n_phi = 0.01;
-            this.p_phi = 1;
-            this.maxFramesHistory = 10;
-            this.atrous5x5 = false;
-
-            this.updateGUI();
-        };  
-
-        this.highQuality = function() {
-            this.c_phi = 105;
-            this.n_phi = 0.01;
-            this.p_phi = 1;
+            this.n_phi = 0.007;
+            this.p_phi = 0.15;
+            this.h_phi = 1;
     
-            this.c_phiMultPerIt = 0.34;
+            this.c_phiMultPerIt = 1;
     
-            this.stepMultiplier = 1.5;
+            this.stepMultiplier = 1.4;
             this.iterations = 10;
     
-            this.atrous5x5 = false;
+            this.atrous5x5 = true;
     
-            this.maxFramesHistory = 10;
-            this.filterHistoryModulation = 0.54;
+            this.maxFramesHistory = 5;
+            this.filterHistoryModulation = 0.88;
             this.spp = 3;
+
+            this.radianceLambdaFix_ = 1;
+            this.radianceLambdaFix  = true;
+
+            this.feedbackLoopFactor = 0.3;
 
             this.updateGUI();
         }
 
-        this.veryHighQuality = function() {
+        this.test2 = function() {
             this.c_phi = 105;
-            this.n_phi = 0.01;
-            this.p_phi = 1;
+            this.n_phi = 0.007;
+            this.p_phi = 0.15;
+            this.h_phi = 1;
     
-            this.c_phiMultPerIt = 0.34;
+            this.c_phiMultPerIt = 1;
     
-            this.stepMultiplier = 1.47;
-            this.iterations = 10;
+            this.stepMultiplier = 1.4;
+            this.iterations = 6;
     
-            this.atrous5x5 = false;
+            this.atrous5x5 = true;
     
-            this.maxFramesHistory = 7;
-            this.filterHistoryModulation = 0.35;
-            this.spp = 5;
+            this.maxFramesHistory = 3;
+            this.filterHistoryModulation = 0.7;
+            this.spp = 4;
+
+            this.radianceLambdaFix_ = 1;
+            this.radianceLambdaFix  = true;
+
+            this.feedbackLoopFactor = 1;
 
             this.updateGUI();
         }
@@ -979,10 +962,9 @@ function initGUI() {
         controller.radianceLambdaFix_ = controller.radianceLambdaFix ? 1 : 0;
     });
 
-    qpf.add(controller, 'lowQuality');
-    qpf.add(controller, 'mediumQuality');
-    qpf.add(controller, 'highQuality');
-    qpf.add(controller, 'veryHighQuality');
+
+    qpf.add(controller, 'test1');
+    qpf.add(controller, 'test2');
 
 
 
