@@ -3,6 +3,10 @@ import { standardMaterial_fs, standardMaterial_vs } from "./shaders/standardMate
 import { litStatueMaterial_fs, litStatueMaterial_vs } from "./shaders/litStatueMaterial.js";
 import { OBJLoader } from "./dependencies/OBJLoader.js";
 
+let sceneType = 0;
+let cornellBGreenMat;
+let perlinNoiseEmissiveMaterial;
+
 function createScene(culledScene, nonCulledScene) {
     let em = 10;
     let emissiveTestMaterial = new THREE.ShaderMaterial({
@@ -26,7 +30,7 @@ function createScene(culledScene, nonCulledScene) {
         fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
     });
 
-    let perlinNoiseEmissiveMaterial = new THREE.ShaderMaterial({ uniforms: { 
+    perlinNoiseEmissiveMaterial = new THREE.ShaderMaterial({ uniforms: { 
             "uEmissive": { value: new THREE.Vector3(0,0,0) },
             "uAlbedo": { value: new THREE.Vector3(1,1,1) }, 
             "uStep": { value: 0 }, 
@@ -53,8 +57,8 @@ function createScene(culledScene, nonCulledScene) {
     window.boxes = [];
     for(let j = 0; j < 80; j++) {
         let r = Math.random();
-        let g = r * 0.6 + Math.random() * 0.4; // Math.random();
-        let b = r * 0.6 + Math.random() * 0.4; // Math.random();
+        let g = r; // * 0.6 + Math.random() * 0.4; // Math.random();
+        let b = r; // * 0.6 + Math.random() * 0.4; // Math.random();
 
         let roughnss = Math.random() > 0.75 ? 0 : 1;
         let emss     = Math.random() > 0.95 ? new THREE.Vector3(r * em,g * em,b * em) : new THREE.Vector3(0,0,0); 
@@ -70,8 +74,11 @@ function createScene(culledScene, nonCulledScene) {
         });
 
         for(let i = 0; i < 2; i++) {
-            let size = Math.random() * 0.8 + 0.15;
-            let box = new THREE.Mesh(new THREE.BoxBufferGeometry(size, size, size), testMaterial);
+            let size1 = Math.random() * 1.1 + 0.1;
+            let size2 = Math.random() * 1.1 + 0.1;
+            let size3 = Math.random() * 1.1 + 0.1;
+
+            let box = new THREE.Mesh(new THREE.BoxBufferGeometry(size1, size2, size3), testMaterial);
             box.position.set(
                 (Math.random() * 2 - 1) * 5,
                 (Math.pow(Math.random(), 4.0) * 3.5) - 4.5,
@@ -96,7 +103,7 @@ function createScene(culledScene, nonCulledScene) {
                 "uAlbedo": { value: new THREE.Vector3(1,0.1,0.2) }, "uStep": { value: 0 }, "uRoughness": { value: 1 },
         }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
     });
-    let cornellBGreenMat = new THREE.ShaderMaterial({ uniforms: { "uEmissive": { value: new THREE.Vector3(0,0,0) },
+    cornellBGreenMat = new THREE.ShaderMaterial({ uniforms: { "uEmissive": { value: new THREE.Vector3(0,0,0) },
             "uAlbedo": { value: new THREE.Vector3(0.1,1,0.2) }, "uStep": { value: 0 }, "uRoughness": { value: 1 },
         }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
     });
@@ -124,43 +131,13 @@ function createScene(culledScene, nonCulledScene) {
         'assets/models/archangel2.obj',
         // called when resource is loaded
         function ( object ) {
-            // let mesh = object.children[0];
-            // mesh.material = new THREE.ShaderMaterial({ uniforms: { 
-            //         "uEmissive": { value: new THREE.Vector3(0,0,0) },
-            //         "uAlbedo": { value: new THREE.Vector3(1,1,1) }, 
-            //         "uStep": { value: 0 }, 
-            //         "uRoughness": { value: 0 },
-            //     }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
-            // });
-            // mesh.position.set(0, -5, -3);
-            // nonCulledScene.add( mesh );
-
-
-
-            // let mesh2 = mesh.clone();
-            // mesh2.material = new THREE.ShaderMaterial({ uniforms: { 
-            //         "uEmissive": { value: new THREE.Vector3(0,0,0) },
-            //         "uAlbedo": { value: new THREE.Vector3(1,1,1) }, 
-            //         "uStep": { value: 0 }, 
-            //         "uRoughness": { value: 1 },
-            //     }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
-            // });
-            // mesh2.position.set(3, -5, -3);
-            // nonCulledScene.add( mesh2 );
-
-
-
-
-
-
-
             let mesh = object.children[0];
             window.mesh2 = mesh.clone();
 
 
             mesh.material = new THREE.ShaderMaterial({ uniforms: { 
                     "uEmissive": { value: new THREE.Vector3(0,0,0) },
-                    "uAlbedo": { value: new THREE.Vector3(1,1,1) }, 
+                    "uAlbedo": { value: new THREE.Vector3(0.81,0.81,0.81) }, 
                     "uStep": { value: 0 }, 
                     "uRoughness": { value: 0 },
                 }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
@@ -192,6 +169,14 @@ function createScene(culledScene, nonCulledScene) {
             console.log( 'An error happened' );
         }
     );
+
+
+
+    window.addEventListener("keypress", (e) => {
+        if(e.key == "e") {
+            sceneSwitch(culledScene, nonCulledScene);
+        }
+    });
 }
 
 function updateScene(now, culledScene, nonCulledScene) {
@@ -235,9 +220,33 @@ function updateScene(now, culledScene, nonCulledScene) {
     }
 
 
-
-    // cbox2.material.uniforms.uTime.value = now;
-    // mesh2.material.uniforms.uTime.value = now;
+    if(sceneType === 1) {
+        cbox2.material.uniforms.uTime.value = now;
+    }
 }
+
+function sceneSwitch(culledScene, nonCulledScene) {
+    sceneType = (sceneType + 1) % 2;
+
+    if(sceneType === 1) {
+        cbox2.material = perlinNoiseEmissiveMaterial;
+        perlinNoiseEmissiveMaterial.side = THREE.BackSide;
+        nonCulledScene.remove(lightBoxMesh1);
+        for(let i = 0; i < window.boxes.length; i++) {
+            if(!window.boxes[i].material.uniforms.uEmissiveRef) {
+                window.boxes[i].material.uniforms.uEmissiveRef = { value: window.boxes[i].material.uniforms.uEmissive.value.clone() };
+            }
+            window.boxes[i].material.uniforms.uEmissive.value = new THREE.Vector3(0,0,0);
+        }
+    } else {
+        nonCulledScene.add(lightBoxMesh1);
+        cbox2.material = cornellBGreenMat;
+        
+        for(let i = 0; i < window.boxes.length; i++) {
+            window.boxes[i].material.uniforms.uEmissive.value = window.boxes[i].material.uniforms.uEmissiveRef.value.clone();
+        }
+    }
+}
+
 
 export { createScene, updateScene };

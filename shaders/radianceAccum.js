@@ -25,7 +25,6 @@ void main() {
     vec3 newRad = texture2D(uCurrentRadiance, vUv).xyz;
     vec3 accumulatedRad = texture2D(uAccumulatedRadiance, vUv + reprojUVOffs).xyz;
 
-
     float maxFrames = uMaxFramesHistory;
     float history = min(texture2D(uHistoryBuffer, vUv).x, maxFrames);
 
@@ -40,92 +39,14 @@ void main() {
     float lambda = (((maxFrames+0.2) - history) / (maxFrames+0.2));
 
     if(uRadianceLambdaFix > 0.5) {
-        
-        
-        // if(history < 0.5) {
-        //     lambda *= 0.3;
-        // } else if (history > 1.5) {
-        //     lambda *= 0.35;
-        // } else if (history > 3.5) {
-        //     lambda *= 0.5;
-        // } else if (history > 5.5) {
-        //     lambda *= 0.75;
-        // } else if (history > 10.5) {
-        //     lambda *= 0.85;
-        // }
-
-
-
-        // if(history < 0.5) {
-        //     lambda *= 0.2;
-        // } else if (history > 1.5) {
-        //     lambda *= 0.3;
-        // } else if (history > 3.5) {
-        //     lambda *= 0.4;
-        // } else if (history > 5.5) {
-        //     lambda *= 0.65;
-        // } else if (history > 7.5) {
-        //     lambda *= 0.75;
-        // } else if (history > 10.5) {
-        //     lambda *= 0.85;
-        // } else if (history > 13.5) {
-        //     lambda *= 1.0;
-        // }
-
-
-
-        // if(history < 0.5) {
-        //     lambda *= 0.15;
-        // } else if (history > 1.5) {
-        //     lambda *= 0.25;
-        // } else if (history > 4.5) {
-        //     lambda *= 0.4;
-        // } else if (history > 7.5) {
-        //     lambda *= 0.75;
-        // } else if (history > 9.5) {
-        //     lambda *= 0.75;
-        // } else if (history > 12.5) {
-        //     lambda *= 0.85;
-        // } else if (history > 13.5) {
-        //     lambda *= 1.0;
-        // }
-
-
-
-        
-
-        // if(history < 0.5) {
-        //     lambda *= 0.25;
-        // } else if (history > 1.5) {
-        //     lambda *= 0.3;
-        // } else if (history > 3.5) {
-        //     lambda *= 0.475;
-        // } else if (history > 5.5) {
-        //     lambda *= 0.75;
-        // } else if (history > 6.5) {
-        //     lambda *= 1.0;
-        // } 
-
-
-
-          
         if(history < 0.5) {
-            lambda *= 0.25;
+            lambda *= 0.45;
         } else if (history < 1.5) {
-            lambda *= 0.55;
+            lambda *= 0.75;
         } 
-        // else if (history < 3.5) {
-        //     lambda *= 0.75;
-        // } else if (history < 4.5) {
-        //     lambda *= 0.8;
-        // } 
-
-        // lambda *= 0.5;
-
     }
 
     vec3 updatedAccum = newRad * lambda + accumulatedRad * (1.0 - lambda);
-
     gl_FragColor = vec4(updatedAccum, 1.0);
 }
 `;

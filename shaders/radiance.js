@@ -26,6 +26,15 @@ function makeSceneShaders() {
     uniform float uFrame;
     uniform vec4  uRandom;
 
+    uniform float uSSRQuality;
+    uniform float uSSRSteps;
+    uniform float uSSRBinarySteps;
+    uniform float uSSRBounces;
+    uniform float uSSRJitter;
+    uniform float uSSRStepMult;
+    uniform float uSSRStartingStep;
+
+
     uniform sampler2D uMaterialBuffer;
     uniform sampler2D uAlbedoBuffer;
     uniform sampler2D uPositionBuffer;
@@ -183,70 +192,72 @@ function makeSceneShaders() {
             // **** quality params
 
 
-                // float startingStep = 0.01;
-                // float stepMult = 1.08;
-                // const int steps = 50;
-                // const int binarySteps = 10;
-                // const int bounces = 3;
-
-                // float startingStep = 0.1;
-                // float stepMult = 1.5;
-                // const int steps = 15;
-                // const int binarySteps = 5;
-                // const int bounces = 2;
-                // float jitt_a = 0.3;
-                // float jitt_b = 0.7;
-
-                // float startingStep = 0.1;
-                // float stepMult = 1.375;
-                // const int steps = 12;
-                // const int binarySteps = 5;
-                // const int bounces = 3;
-                // float jitt_a = 0.65;
-                // float jitt_b = 0.35;
-
-
-
-
-
-
                 // desperate quality
-                // float startingStep = 0.1;
-                // float stepMult = 1.375;
-                // const int steps = 12;
-                // const int binarySteps = 5;
-                // const int bounces = 3;
-                // float jitt_a = 0.65;
-                // float jitt_b = 0.35;
+                float startingStep = 0.1;
+                float stepMult = 1.375;
+                int steps = 12;
+                int binarySteps = 5;
+                int bounces = 2;
+                float jitt_a = 0.65;
+                float jitt_b = 0.35;
+                float jitter = 0.0;
 
+                const int maxBounces     = 3;
+                const int maxSteps       = 50;
+                const int maxBinarySteps = 6;
+
+                // lower quality
+                if(uSSRQuality > 0.5) {
+                    startingStep = 0.1;
+                    stepMult = 1.265;
+                    steps = 15;
+                    binarySteps = 5;
+                    bounces = 3;
+                    jitt_a = 0.75;
+                    jitt_b = 0.25;
+                }
 
                 // low quality
-                // float startingStep = 0.1;
-                // float stepMult = 1.265;
-                // const int steps = 15;
-                // const int binarySteps = 5;
-                // const int bounces = 3;
-                // float jitt_a = 0.75;
-                // float jitt_b = 0.25;
-
+                if(uSSRQuality > 1.5) {
+                    startingStep = 0.15;
+                    stepMult = 1.15;
+                    steps = 20;
+                    binarySteps = 5;
+                    bounces = 3;
+                    jitter = 0.0;
+                }
 
                 // medium quality
-                float startingStep = 0.05;
-                float stepMult = 1.165;
-                const int steps = 30;
-                const int binarySteps = 5;
-                const int bounces = 3;
-                float jitt_a = 0.75;
-                float jitt_b = 0.25;
+                if(uSSRQuality > 2.5) {
+                    startingStep = 0.05;
+                    stepMult = 1.165;
+                    steps = 30;
+                    binarySteps = 5;
+                    bounces = 3;
+                    jitt_a = 0.75;
+                    jitt_b = 0.25;
+                }
 
                 // high quality
-                // float startingStep = 0.05;
-                // float stepMult = 1.12;
-                // const int steps = 40;
-                // const int binarySteps = 6;
-                // const int bounces = 3;
-                // float jitt_a = 0.75;
-                // float jitt_b = 0.25;
+                if(uSSRQuality > 3.5) {
+                    startingStep = 0.05;
+                    stepMult = 1.12;
+                    steps = 40;
+                    binarySteps = 6;
+                    bounces = 3;
+                    jitt_a = 0.75;
+                    jitt_b = 0.25;
+                }
+
+                // custom quality
+                if(uSSRQuality > 4.5) {
+                    startingStep = uSSRStartingStep;
+                    stepMult = uSSRStepMult;
+                    steps = int(uSSRSteps);
+                    binarySteps = int(uSSRBinarySteps);
+                    bounces = int(uSSRBounces);
+                    jitter = uSSRJitter;
+                }
 
                 // very quality
                 // float startingStep = 0.05;
@@ -269,14 +280,22 @@ function makeSceneShaders() {
         }
         mult *= albedoBuff * max(dot(rd, normBuff), 0.0);
 
-        for(int b = 0; b < bounces; b++) {
+        for(int b = 0; b < maxBounces; b++) {
             vec3 p = ro;
             float step = startingStep;
 
-            for(int i = 0; i < steps; i++) {
+            if(b >= bounces) break;
+
+            for(int i = 0; i < maxSteps; i++) {
+
+                if(i >= steps) break;
+
                 vec3 initialP = p;
                 // jittered step increase, can probably use a much better solution
-                p += rd * (step * jitt_a + step * jitt_b); //rand(p) * 0.25);
+                // p += rd * (step * jitt_a + step * jitt_b); //rand(p) * 0.25);
+                float jj_a = rand(p) * jitter + (1.0 - jitter);
+                float jj_b = 1.0 - jj_a;
+                p += rd * (step * jj_a);
                 step *= stepMult;
 
                 vec4 projP = vProjViewModelMatrix * vec4(p, 1.0);
@@ -306,7 +325,10 @@ function makeSceneShaders() {
                     vec3 p1 = initialP;
                     vec3 p2 = p;
                     float lastRecordedPosBuffThatIntersected = distanceFromCameraAtPosBuff;
-                    for(int j = 0; j < binarySteps; j++) {
+                    for(int j = 0; j < maxBinarySteps; j++) {
+                        
+                        if(j >= binarySteps) break;
+                        
                         vec3 mid = (p1 + p2) * 0.5;
                         vec3 posAtMid = positionBufferAtP(mid, viewDir);
                         float distanceFromCameraAtMid     = length(mid - uCameraPos);
@@ -358,6 +380,8 @@ function makeSceneShaders() {
 
                     break;
                 }
+
+                p += rd * (step * jj_b);
             }
         }
 

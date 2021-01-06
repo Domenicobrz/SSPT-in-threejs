@@ -95,7 +95,8 @@ function init() {
 
     controls = new OrbitControls( camera, renderer.domElement );
     controls.enableDamping = true;
-    controls.dampingFactor = 0.0875;
+    // controls.dampingFactor = 0.0875;
+    controls.dampingFactor = 0.1875;
     controls.enablePan = true;
     controls.panSpeed = 1.0;
     controls.screenSpacePanning = true;
@@ -174,6 +175,13 @@ function init() {
             "uRandom": { value: new THREE.Vector4(0, 0, 0, 0) },
             "uTime": { value: 0 },
             "uFrame": { value: 0 },
+            "uSSRQuality": { value: 0 },
+            "uSSRSteps": { value: 0 },
+            "uSSRBinarySteps": { value: 0 },
+            "uSSRBounces": { value: 0 },
+            "uSSRJitter": { value: 0 },
+            "uSSRStepMult": { value: 0 },
+            "uSSRStartingStep": { value: 0 },
 
             "uMirrorIndex": { value: 1 },
 
@@ -707,6 +715,13 @@ function animate(now) {
         radianceBufferMaterial.uniforms.uTime.value = now;
         radianceBufferMaterial.uniforms.uFrame.value = radianceFrameCount % 256;
         radianceBufferMaterial.uniforms.uMirrorIndex.value = controller.mirrorIndex;
+        radianceBufferMaterial.uniforms.uSSRQuality.value = controller.ssrQuality;
+        radianceBufferMaterial.uniforms.uSSRSteps.value = controller.ssrSteps;
+        radianceBufferMaterial.uniforms.uSSRBinarySteps.value = controller.ssrBinarySteps;
+        radianceBufferMaterial.uniforms.uSSRBounces.value = controller.ssrBounces;
+        radianceBufferMaterial.uniforms.uSSRJitter.value = controller.ssrJitter;
+        radianceBufferMaterial.uniforms.uSSRStepMult.value = controller.ssrStepMult;
+        radianceBufferMaterial.uniforms.uSSRStartingStep.value = controller.ssrStartingStep;
         displayQuadMesh.material = radianceBufferMaterial;
         renderer.render(displayScene, camera );
 
@@ -806,7 +821,7 @@ function animate(now) {
     if(ppress) displayQuadMesh.material.uniforms.uTexture.value = historyRT.rt3.texture;
     if(npress) displayQuadMesh.material.uniforms.uTexture.value = momentMoveRT.texture;
     if(mpress) displayQuadMesh.material.uniforms.uTexture.value = radianceRT.rt1.texture;
-    if(ipress) displayQuadMesh.material.uniforms.uTexture.value = hrNormalRT.texture;
+    if(ipress) displayQuadMesh.material.uniforms.uTexture.value = emissionRT.texture;
     if(bpress) displayQuadMesh.material.uniforms.uTexture.value = albedoRT.texture;
 
     renderer.clear();
@@ -843,6 +858,14 @@ function initGUI() {
         this.spp = 1;
         this.lowhsspp = 0;
         this.mirrorIndex = 1;
+
+        this.ssrQuality = 2;
+        this.ssrSteps   = 15;
+        this.ssrBinarySteps = 5;
+        this.ssrJitter = 0.4;
+        this.ssrBounces = 3;
+        this.ssrStepMult = 1.375;
+        this.ssrStartingStep = 0.1;
 
         this.radianceLambdaFix_ = false;
         this.radianceLambdaFix = false;
@@ -918,6 +941,7 @@ function initGUI() {
 
     var wff = gui.addFolder('Wavelet Filter');
     var ptf = gui.addFolder('Path Tracer');
+    var ssrf = gui.addFolder('SSR Params');
     var rpf = gui.addFolder('Reprojection Params');
     var qpf = gui.addFolder('Quality Presets');
 
@@ -956,6 +980,15 @@ function initGUI() {
     ptf.add(controller, 'lowhsspp', 0, 10).step(1);
     ptf.add(controller, 'mirrorIndex', 1, 4).step(1);
 
+    ssrf.add(controller, 'ssrQuality', 0, 5).step(1);
+    ssrf.add(controller, 'ssrSteps', 1, 50).step(1);
+    ssrf.add(controller, 'ssrBinarySteps', 1, 20).step(1);
+    ssrf.add(controller, 'ssrBounces', 0, 5).step(1);
+    ssrf.add(controller, 'ssrJitter', 0, 1);
+    ssrf.add(controller, 'ssrStepMult', 1, 4);
+    ssrf.add(controller, 'ssrStartingStep', 0, 1);
+
+
     rpf.add(controller, 'maxFramesHistory', 0, 20).step(1);
     rpf.add(controller, 'filterHistoryModulation', 0, 1);
     rpf.add(controller, 'radianceLambdaFix').onChange(() => {
@@ -971,6 +1004,7 @@ function initGUI() {
     wff.open();
     ptf.open();
     rpf.open();
+    ssrf.open();
     qpf.open();
 }
 
