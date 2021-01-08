@@ -22,7 +22,6 @@ function makeSceneShaders() {
     uniform float uCurrSample;
     uniform float uLowHistorySamples;
     uniform float uTime;
-    uniform float uMirrorIndex;
     uniform float uFrame;
     uniform vec4  uRandom;
 
@@ -33,6 +32,7 @@ function makeSceneShaders() {
     uniform float uSSRJitter;
     uniform float uSSRStepMult;
     uniform float uSSRStartingStep;
+    uniform float uMaxIntersectionDepthDistance;
 
 
     uniform sampler2D uMaterialBuffer;
@@ -182,6 +182,7 @@ function makeSceneShaders() {
 
 
 
+       
 
 
 
@@ -213,8 +214,6 @@ function makeSceneShaders() {
                     steps = 15;
                     binarySteps = 5;
                     bounces = 3;
-                    jitt_a = 0.75;
-                    jitt_b = 0.25;
                 }
 
                 // low quality
@@ -224,7 +223,6 @@ function makeSceneShaders() {
                     steps = 20;
                     binarySteps = 5;
                     bounces = 3;
-                    jitter = 0.0;
                 }
 
                 // medium quality
@@ -234,8 +232,6 @@ function makeSceneShaders() {
                     steps = 30;
                     binarySteps = 5;
                     bounces = 3;
-                    jitt_a = 0.75;
-                    jitt_b = 0.25;
                 }
 
                 // high quality
@@ -245,8 +241,6 @@ function makeSceneShaders() {
                     steps = 40;
                     binarySteps = 6;
                     bounces = 3;
-                    jitt_a = 0.75;
-                    jitt_b = 0.25;
                 }
 
                 // custom quality
@@ -258,20 +252,10 @@ function makeSceneShaders() {
                     bounces = int(uSSRBounces);
                     jitter = uSSRJitter;
                 }
-
-                // very quality
-                // float startingStep = 0.05;
-                // float stepMult = 1.09;
-                // const int steps = 80;
-                // const int binarySteps = 10;
-                // const int bounces = 3;
-                // float jitt_a = 0.75;
-                // float jitt_b = 0.25;
             // **** quality params - END
 
 
         vec3 mult = vec3(1.0);
-        float maxIntersectionDepthDistance = 0.5;
         ro = posBuff;
         if(matBuff.x > 0.9) {   // if roughness > 0.9
             rd = sampleDiffuseHemisphere(normBuff, ro);
@@ -283,6 +267,8 @@ function makeSceneShaders() {
         for(int b = 0; b < maxBounces; b++) {
             vec3 p = ro;
             float step = startingStep;
+            // maxIntersectionDepthDistance will be progressively multiplied by stepMultiplier as we go on with the raymarching
+            float maxIntersectionDepthDistance = uMaxIntersectionDepthDistance; //0.5;
 
             if(b >= bounces) break;
 
@@ -297,6 +283,7 @@ function makeSceneShaders() {
                 float jj_b = 1.0 - jj_a;
                 p += rd * (step * jj_a);
                 step *= stepMult;
+                maxIntersectionDepthDistance *= stepMult;
 
                 vec4 projP = vProjViewModelMatrix * vec4(p, 1.0);
                 vec2 pNdc = (projP / projP.w).xy;

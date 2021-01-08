@@ -6,10 +6,12 @@ import { OBJLoader } from "./dependencies/OBJLoader.js";
 let sceneType = 0;
 let cornellBGreenMat;
 let perlinNoiseEmissiveMaterial;
+let emissiveTestMaterial;
+let testMaterial;
 
 function createScene(culledScene, nonCulledScene) {
     let em = 10;
-    let emissiveTestMaterial = new THREE.ShaderMaterial({
+    emissiveTestMaterial = new THREE.ShaderMaterial({
         uniforms: {
             // "uEmissive": { value: new THREE.Vector3(0.5 * em, 0.4 * em, 0.3 * em) },
             "uEmissive": { value: new THREE.Vector3(0.5 * em, 0.3 * em, 0.1 * em) },
@@ -38,6 +40,17 @@ function createScene(culledScene, nonCulledScene) {
             "uRoughness": { value: 0 },
         }, fragmentShader: litStatueMaterial_fs, vertexShader: litStatueMaterial_vs, side: THREE.DoubleSide,
     });
+
+    testMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            "uEmissive": { value: new THREE.Vector3(0,0,0) },
+            "uAlbedo": { value: new THREE.Vector3(1,1,1) },
+            "uRoughness": { value: 1 },
+            "uStep": { value: 0 },
+        },
+        fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
+    });
+
     
    
     
@@ -55,13 +68,23 @@ function createScene(culledScene, nonCulledScene) {
 
 
     window.boxes = [];
-    for(let j = 0; j < 80; j++) {
+    for(let j = 0; j < 50 /*80*/; j++) {
         let r = Math.random();
         let g = r; // * 0.6 + Math.random() * 0.4; // Math.random();
         let b = r; // * 0.6 + Math.random() * 0.4; // Math.random();
 
         let roughnss = Math.random() > 0.75 ? 0 : 1;
         let emss     = Math.random() > 0.95 ? new THREE.Vector3(r * em,g * em,b * em) : new THREE.Vector3(0,0,0); 
+
+        emss = new THREE.Vector3(0,0,0);
+        // let ra = Math.random();
+        // if (ra < 0.2) {
+        //     emss = new THREE.Vector3(10,1,1);
+        // }
+        // if(ra < 0.1) {
+        //     emss = new THREE.Vector3(1,10,1);
+        // }
+
         // let emss     = new THREE.Vector3(0,0,0);  
         let testMaterial = new THREE.ShaderMaterial({
             uniforms: {
@@ -117,6 +140,13 @@ function createScene(culledScene, nonCulledScene) {
     cbox2.rotation.y = -Math.PI * 0.5;
     culledScene.add(cbox2);
 
+    // window.cbox3 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), new THREE.ShaderMaterial({ uniforms: { "uEmissive": { value: new THREE.Vector3(0,0,0) },
+    // "uAlbedo": { value: new THREE.Vector3(1,1,1) }, "uStep": { value: 0 }, "uRoughness": { value: 0 },
+    // }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+    // }));
+    // cbox3.position.set(0, -4.9975, 0);
+    // cbox3.rotation.x = Math.PI * 0.5;
+    // culledScene.add(cbox3);
 
     // cbox2.material = perlinNoiseEmissiveMaterial;
     // perlinNoiseEmissiveMaterial.side = THREE.BackSide;
@@ -175,6 +205,9 @@ function createScene(culledScene, nonCulledScene) {
     window.addEventListener("keypress", (e) => {
         if(e.key == "e") {
             sceneSwitch(culledScene, nonCulledScene);
+        }
+        if(e.key == "r") {
+            switchLights();
         }
     });
 }
@@ -248,5 +281,37 @@ function sceneSwitch(culledScene, nonCulledScene) {
     }
 }
 
+let noLights = true;
+function switchSceneLights() {
+    noLights = !noLights;
 
-export { createScene, updateScene };
+    if(!noLights) {
+        lightBoxMesh1.material = testMaterial;
+    } else {
+        lightBoxMesh1.material = emissiveTestMaterial;
+    }
+
+    for(let i = 0; i < window.boxes.length; i++) {
+        let emss = new THREE.Vector3(0,0,0);
+        let ra = Math.random();
+        // if (ra < 0.2) {
+        //     emss = new THREE.Vector3(10,1,1);
+        // }
+        // if(ra < 0.1) {
+        //     emss = new THREE.Vector3(1,10,1);
+        // }
+        if(ra < 0.15) {
+            emss = new THREE.Vector3(Math.random() * 10, Math.random() * 10, Math.random() * 10);
+        }
+
+
+        if(noLights) {
+            emss = new THREE.Vector3(0,0,0);
+        }
+
+        window.boxes[i].material.uniforms.uEmissive.value = emss;
+    }
+
+}
+
+export { createScene, updateScene, switchSceneLights };

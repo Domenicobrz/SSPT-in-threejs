@@ -11,7 +11,7 @@ import { historyTest_fs, historyTest_vs, historyAccum_fs, historyAccum_vs } from
 import { radianceAccum_fs, radianceAccum_vs } from "./shaders/radianceAccum.js";
 import { standardMaterial_fs, standardMaterial_vs } from "./shaders/standardMaterial.js";
 import { feedbackloop_fs, feedbackloop_vs } from "./shaders/feedbackloop.js";
-import { createScene, updateScene } from "./scene.js";
+import { createScene, updateScene, switchSceneLights } from "./scene.js";
 import * as dat from './dependencies/dat.gui.js';
 import Stats from "./dependencies/stats.js";
 
@@ -182,8 +182,7 @@ function init() {
             "uSSRJitter": { value: 0 },
             "uSSRStepMult": { value: 0 },
             "uSSRStartingStep": { value: 0 },
-
-            "uMirrorIndex": { value: 1 },
+            "uMaxIntersectionDepthDistance": { value: 0.5 },
 
             "uHistoryBuffer":  { type: "t", value: historyRT.rt3.texture },
             "uMaterialBuffer": { type: "t", value: materialRT.texture },
@@ -714,7 +713,6 @@ function animate(now) {
         radianceBufferMaterial.uniforms.uRandom.value = new THREE.Vector4(Math.random(), Math.random(), Math.random(), Math.random());
         radianceBufferMaterial.uniforms.uTime.value = now;
         radianceBufferMaterial.uniforms.uFrame.value = radianceFrameCount % 256;
-        radianceBufferMaterial.uniforms.uMirrorIndex.value = controller.mirrorIndex;
         radianceBufferMaterial.uniforms.uSSRQuality.value = controller.ssrQuality;
         radianceBufferMaterial.uniforms.uSSRSteps.value = controller.ssrSteps;
         radianceBufferMaterial.uniforms.uSSRBinarySteps.value = controller.ssrBinarySteps;
@@ -722,6 +720,7 @@ function animate(now) {
         radianceBufferMaterial.uniforms.uSSRJitter.value = controller.ssrJitter;
         radianceBufferMaterial.uniforms.uSSRStepMult.value = controller.ssrStepMult;
         radianceBufferMaterial.uniforms.uSSRStartingStep.value = controller.ssrStartingStep;
+        radianceBufferMaterial.uniforms.uMaxIntersectionDepthDistance.value = controller.maxIntersectionDepthDistance;
         displayQuadMesh.material = radianceBufferMaterial;
         renderer.render(displayScene, camera );
 
@@ -840,41 +839,100 @@ function initGUI() {
 
     var GUIcontroller = function() {
         this.c_phi = 105;
-        this.n_phi = 0.01;
-        this.p_phi = 0.2;
+        this.n_phi = 0.007;
+        this.p_phi = 0.15;
         this.h_phi = 1;
 
         this.c_phiMultPerIt = 1;
 
-        this.stepMultiplier = 1.365;
+        this.stepMultiplier = 1.4;
         this.iterations = 10;
 
-        this.atrous5x5 = false;
+        this.atrous5x5 = true;
 
-        this.maxFramesHistory = 7;
-        this.filterHistoryModulation = 0.5;
-        this.feedbackLoopFactor = 0;
+        this.maxFramesHistory = 5;
+        this.filterHistoryModulation = 0.88;
+        this.feedbackLoopFactor = 0.3;
         this.exposure = -1;
-        this.spp = 1;
+        this.spp = 3;
         this.lowhsspp = 0;
-        this.mirrorIndex = 1;
 
         this.ssrQuality = 2;
         this.ssrSteps   = 15;
         this.ssrBinarySteps = 5;
-        this.ssrJitter = 0.4;
+        this.ssrJitter = 0;
         this.ssrBounces = 3;
         this.ssrStepMult = 1.375;
         this.ssrStartingStep = 0.1;
+        this.maxIntersectionDepthDistance = 0.5;
 
-        this.radianceLambdaFix_ = false;
-        this.radianceLambdaFix = false;
+        this.radianceLambdaFix_ = 1;
+        this.radianceLambdaFix = true;
 
-        this.test1 = function() {
+        this.lowest = function() {
             this.c_phi = 105;
             this.n_phi = 0.007;
             this.p_phi = 0.15;
             this.h_phi = 1;
+    
+            this.ssrQuality = 0;
+            this.maxIntersectionDepthDistance = 0.15;
+          
+            this.c_phiMultPerIt = 1;
+    
+            this.stepMultiplier = 1.4;
+            this.iterations = 10;
+    
+            this.atrous5x5 = true;
+    
+            this.maxFramesHistory = 12;
+            this.filterHistoryModulation = 0.85;
+            this.spp = 1;
+
+            this.radianceLambdaFix_ = 1;
+            this.radianceLambdaFix  = true;
+
+            this.feedbackLoopFactor = 1;
+
+            this.updateGUI();
+        }
+
+        this.low = function() {
+            this.c_phi = 105;
+            this.n_phi = 0.007;
+            this.p_phi = 0.15;
+            this.h_phi = 1;
+    
+            this.ssrQuality = 1;
+            this.maxIntersectionDepthDistance = 0.24;
+          
+            this.c_phiMultPerIt = 1;
+    
+            this.stepMultiplier = 1.4;
+            this.iterations = 10;
+    
+            this.atrous5x5 = true;
+    
+            this.maxFramesHistory = 5;
+            this.filterHistoryModulation = 0.78;
+            this.spp = 2;
+
+            this.radianceLambdaFix_ = 1;
+            this.radianceLambdaFix  = true;
+
+            this.feedbackLoopFactor = 0.32;
+
+            this.updateGUI();
+        }
+
+        this.medium = function() {
+            this.c_phi = 105;
+            this.n_phi = 0.007;
+            this.p_phi = 0.15;
+            this.h_phi = 1;
+
+            this.ssrQuality = 2;
+            this.maxIntersectionDepthDistance = 0.5;
     
             this.c_phiMultPerIt = 1;
     
@@ -895,22 +953,25 @@ function initGUI() {
             this.updateGUI();
         }
 
-        this.test2 = function() {
+        this.high = function() {
             this.c_phi = 105;
             this.n_phi = 0.007;
             this.p_phi = 0.15;
             this.h_phi = 1;
     
+            this.ssrQuality = 3;
+            this.maxIntersectionDepthDistance = 0.25;
+
             this.c_phiMultPerIt = 1;
     
             this.stepMultiplier = 1.4;
-            this.iterations = 6;
+            this.iterations = 8;
     
             this.atrous5x5 = true;
     
-            this.maxFramesHistory = 3;
-            this.filterHistoryModulation = 0.7;
-            this.spp = 4;
+            this.maxFramesHistory = 4;
+            this.filterHistoryModulation = 0.79;
+            this.spp = 6;
 
             this.radianceLambdaFix_ = 1;
             this.radianceLambdaFix  = true;
@@ -918,6 +979,38 @@ function initGUI() {
             this.feedbackLoopFactor = 1;
 
             this.updateGUI();
+        }
+
+        this.iCantEvenTestThisProperly = function() {
+            this.c_phi = 105;
+            this.n_phi = 0.007;
+            this.p_phi = 0.15;
+            this.h_phi = 1;
+    
+            this.ssrQuality = 3;
+            this.maxIntersectionDepthDistance = 0.25;
+
+            this.c_phiMultPerIt = 1;
+    
+            this.stepMultiplier = 1.4;
+            this.iterations = 8;
+    
+            this.atrous5x5 = true;
+    
+            this.maxFramesHistory = 4;
+            this.filterHistoryModulation = 0.85;
+            this.spp = 10;
+
+            this.radianceLambdaFix_ = 1;
+            this.radianceLambdaFix  = true;
+
+            this.feedbackLoopFactor = 0.6;
+
+            this.updateGUI();
+        }
+
+        this.switchLights = function() {
+            switchSceneLights();
         }
 
         this.updateGUI = function() {
@@ -940,10 +1033,10 @@ function initGUI() {
 
 
     var wff = gui.addFolder('Wavelet Filter');
-    var ptf = gui.addFolder('Path Tracer');
-    var ssrf = gui.addFolder('SSR Params');
+    var rmf = gui.addFolder('Ray Marcher');
     var rpf = gui.addFolder('Reprojection Params');
     var qpf = gui.addFolder('Quality Presets');
+    var fff = gui.addFolder('For fun');
 
     wff.add(controller, 'c_phi', 0, 2000).onChange(function(value) {
         atrousMaterial.uniforms.uC_phi.value = value;
@@ -975,18 +1068,18 @@ function initGUI() {
         atrousMaterial.needsUpdate = true;
     });
 
-    ptf.add(controller, 'exposure', -10, 10);
-    ptf.add(controller, 'spp', 1, 15).step(1);
-    ptf.add(controller, 'lowhsspp', 0, 10).step(1);
-    ptf.add(controller, 'mirrorIndex', 1, 4).step(1);
+    rmf.add(controller, 'exposure', -10, 10);
+    rmf.add(controller, 'spp', 1, 15).step(1);
+    rmf.add(controller, 'lowhsspp', 0, 10).step(1);
 
-    ssrf.add(controller, 'ssrQuality', 0, 5).step(1);
-    ssrf.add(controller, 'ssrSteps', 1, 50).step(1);
-    ssrf.add(controller, 'ssrBinarySteps', 1, 20).step(1);
-    ssrf.add(controller, 'ssrBounces', 0, 5).step(1);
-    ssrf.add(controller, 'ssrJitter', 0, 1);
-    ssrf.add(controller, 'ssrStepMult', 1, 4);
-    ssrf.add(controller, 'ssrStartingStep', 0, 1);
+    rmf.add(controller, 'ssrQuality', 0, 5).step(1);
+    rmf.add(controller, 'ssrSteps', 1, 50).step(1);
+    rmf.add(controller, 'ssrBinarySteps', 1, 20).step(1);
+    rmf.add(controller, 'ssrBounces', 0, 5).step(1);
+    rmf.add(controller, 'ssrJitter', 0, 1);
+    rmf.add(controller, 'ssrStepMult', 1, 4);
+    rmf.add(controller, 'ssrStartingStep', 0, 1);
+    rmf.add(controller, 'maxIntersectionDepthDistance', 0, 5);
 
 
     rpf.add(controller, 'maxFramesHistory', 0, 20).step(1);
@@ -996,16 +1089,24 @@ function initGUI() {
     });
 
 
-    qpf.add(controller, 'test1');
-    qpf.add(controller, 'test2');
+    qpf.add(controller, 'lowest');
+    qpf.add(controller, 'low');
+    qpf.add(controller, 'medium');
+    qpf.add(controller, 'high');
+    qpf.add(controller, 'iCantEvenTestThisProperly');
+
+    fff.add(controller, 'switchLights');
 
 
-
-    wff.open();
-    ptf.open();
-    rpf.open();
-    ssrf.open();
+    // wff.open();
+    // ptf.open();
+    // rpf.open();
+    // ssrf.open();
     qpf.open();
+    fff.open();
+
+
+    controller.medium();
 }
 
 
