@@ -942,7 +942,7 @@ function initGUI() {
             this.atrous5x5 = true;
     
             this.maxFramesHistory = 5;
-            this.filterHistoryModulation = 0.88;
+            this.filterHistoryModulation = 0.85;
             this.spp = 3;
 
             this.radianceLambdaFix_ = 1;
