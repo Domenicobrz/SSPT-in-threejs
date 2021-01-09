@@ -41,11 +41,13 @@ let hrPositionRT;
 let hrNormalRT;
 
 let positionBufferMaterial;
-let materialBufferMaterial;
+let positionBufferMaterialCulled;
 let normalBufferMaterial;
+let normalBufferMaterialCulled;
 let radianceBufferMaterial;
 let momentBufferMaterial;
 let historyTestMaterial;
+let historyTestMaterialCulled;
 let historyAccumMaterial;
 let radianceAccumMaterial;
 let atrousMaterial;
@@ -72,8 +74,6 @@ var stats = new Stats();
 stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 document.body.appendChild( stats.dom );
 
-let culledScene;
-let nonCulledScene;
 let momentBufferScene;
 
 function init() {
@@ -87,8 +87,6 @@ function init() {
     document.body.appendChild( renderer.domElement );
 
     scene = new THREE.Scene();
-    culledScene = new THREE.Scene();
-    nonCulledScene = new THREE.Scene();
     momentBufferScene = new THREE.Scene();
     displayScene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 1, 1000 );
@@ -144,6 +142,9 @@ function init() {
         vertexShader: position_vs,
         side: THREE.DoubleSide,
     });
+    // be careful! apparently .clone() doesn't bind any associated texture uniforms
+    positionBufferMaterialCulled = positionBufferMaterial.clone();
+    positionBufferMaterialCulled.side = THREE.BackSide;
 
     normalBufferMaterial = new THREE.ShaderMaterial({
         uniforms: {
@@ -153,6 +154,9 @@ function init() {
         vertexShader: normal_vs,
         side: THREE.DoubleSide,
     });
+    // be careful! apparently .clone() doesn't bind any associated texture uniforms
+    normalBufferMaterialCulled = normalBufferMaterial.clone();
+    normalBufferMaterialCulled.side = THREE.BackSide;
 
     momentBufferMaterial = new THREE.ShaderMaterial({
         uniforms: {
@@ -239,7 +243,20 @@ function init() {
         vertexShader: historyTest_vs,
         side: THREE.DoubleSide,
     });
-
+    // apparently I can't just clone historyTestMaterial, otherwise it wont bind the textures..
+    historyTestMaterialCulled = new THREE.ShaderMaterial({
+        uniforms: {
+            "uNormalBuffer":   { type: "t", value: normalRT.texture   },
+            "uPositionBuffer": { type: "t", value: positionRT.texture },
+            "uRadianceBuffer": { type: "t", value: radianceRT.rt3.texture },
+            "uMomentMove":     { type: "t", value: momentMoveRT.texture },
+            "uCameraPos":      { type: "t", value: camera.position },
+            "uInvScreenSize":  { value: new THREE.Vector2(1 / pr_width, 1 / pr_height) },
+        },
+        fragmentShader: historyTest_fs,
+        vertexShader: historyTest_vs,
+        side: THREE.BackSide,
+    });
 
     historyAccumMaterial = new THREE.ShaderMaterial({
         uniforms: {
@@ -297,7 +314,7 @@ function init() {
     });
 
 
-    createScene(culledScene, nonCulledScene);
+    createScene(scene);
 
 
     window.addEventListener("keydown", (e) => {
@@ -434,7 +451,7 @@ function animate(now) {
     controls.update();
 
 
-    updateScene(now, culledScene, nonCulledScene);
+    updateScene(now, scene);
 
 
     // we need to create moment buffers BEFORE we update normal/position RTs
@@ -442,59 +459,37 @@ function animate(now) {
     // are you surprised I'm using the matrixWorldInverse? then think more..
     let oldCameraMatrix = controls.lastViewMatrixInverse;
 
-    momentBufferMaterial.needsUpdate = true;
-    momentBufferMaterial.side = THREE.BackSide;
-
     renderer.setRenderTarget(momentMoveRT);
     renderer.clear();
 
-    for(let i = culledScene.children.length - 1; i >= 0; i--) {
-        culledScene.children[i].savedMaterial = culledScene.children[i].material;
-        culledScene.children[i].material = momentBufferMaterial;
+    for(let i = scene.children.length - 1; i >= 0; i--) {
+        scene.children[i].savedMaterial = scene.children[i].material;
+        scene.children[i].material = momentBufferMaterial;
+
+        if(scene.children[i].savedMaterial.side == THREE.BackSide) {
+            momentBufferMaterial.side = THREE.BackSide;
+        } else {
+            momentBufferMaterial.side = THREE.DoubleSide;   
+        }
+        momentBufferMaterial.needsUpdate = true;
 
         let viewModelMatrix = new THREE.Matrix4();
-        viewModelMatrix.multiplyMatrices(oldCameraMatrix, culledScene.children[i].oldWorldMatrix);
+        viewModelMatrix.multiplyMatrices(oldCameraMatrix, scene.children[i].oldWorldMatrix);
         momentBufferMaterial.uniforms.uOldModelViewMatrix.value = viewModelMatrix;
         momentBufferMaterial.uniforms.uOldModelViewMatrix.needsUpdate = true;
         momentBufferMaterial.uniforms.needsUpdate = true;
 
-        momentBufferScene.add(culledScene.children[i]);
+        // remember: momentBufferScene will always hold 1 single object each time render() is called
+        momentBufferScene.add(scene.children[i]);
 
         renderer.render( momentBufferScene, camera );
 
-        // re-add again this object to culledScene since it was removed by momentBufferScene.add(...)
+        // re-add again this object to scene since it was removed by momentBufferScene.add(...)
         // it should also remove the object from momentBufferScene
-        culledScene.add(momentBufferScene.children[0]);
+        scene.add(momentBufferScene.children[0]);
     }
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].material = culledScene.children[i].savedMaterial;
-    }
-
-    // ---
-
-    momentBufferMaterial.needsUpdate = true;
-    momentBufferMaterial.side = THREE.DoubleSide;
-
-    for(let i = nonCulledScene.children.length - 1; i >= 0; i--) {
-        nonCulledScene.children[i].savedMaterial = nonCulledScene.children[i].material;
-        nonCulledScene.children[i].material = momentBufferMaterial;
-
-        let viewModelMatrix = new THREE.Matrix4();
-        viewModelMatrix.multiplyMatrices(oldCameraMatrix, nonCulledScene.children[i].oldWorldMatrix);
-        momentBufferMaterial.uniforms.uOldModelViewMatrix.value = viewModelMatrix;
-        momentBufferMaterial.uniforms.uOldModelViewMatrix.needsUpdate = true;
-        momentBufferMaterial.uniforms.needsUpdate = true;
-
-        momentBufferScene.add(nonCulledScene.children[i]);
-
-        renderer.render( momentBufferScene, camera );
-
-        // re-add again this object to culledScene since it was removed by momentBufferScene.add(...)
-        // it should also remove the object from momentBufferScene
-        nonCulledScene.add(momentBufferScene.children[0]);
-    }
-    for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].material = nonCulledScene.children[i].savedMaterial;
+    for(let i = 0; i < scene.children.length; i++) {
+        scene.children[i].material = scene.children[i].savedMaterial;
     }
     // **************** create moment buffers - END
 
@@ -506,43 +501,25 @@ function animate(now) {
     // of the previous frames
     // on rt1 we add the success vs unsuccess buffer (either +1 or -1)
     historyTestMaterial.uniforms.uCameraPos.value = camera.position;
-    historyTestMaterial.side = THREE.BackSide;
+    historyTestMaterialCulled.uniforms.uCameraPos.value = camera.position;
     
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].savedMaterial = culledScene.children[i].material;
-        culledScene.children[i].material = historyTestMaterial;
+    for(let i = 0; i < scene.children.length; i++) {
+        scene.children[i].savedMaterial = scene.children[i].material;
+
+        if(scene.children[i].savedMaterial.side == THREE.BackSide) {
+            scene.children[i].material = historyTestMaterialCulled;
+        } else {
+            scene.children[i].material = historyTestMaterial;
+        }
     }
 
     renderer.setRenderTarget(historyRT.rt1);
     renderer.clear();
-    renderer.render( culledScene, camera );
+    renderer.render( scene, camera );
 
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].material = culledScene.children[i].savedMaterial;
+    for(let i = 0; i < scene.children.length; i++) {
+        scene.children[i].material = scene.children[i].savedMaterial;
     }
-
-    // ---
-
-    historyTestMaterial.side = THREE.DoubleSide;
-    
-    for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].savedMaterial = nonCulledScene.children[i].material;
-        nonCulledScene.children[i].material = historyTestMaterial;
-    }
-
-    renderer.render( nonCulledScene, camera );
-
-    for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].material = nonCulledScene.children[i].savedMaterial;
-    }
-
-
-
-
-
-
-
-
 
 
 
@@ -562,47 +539,28 @@ function animate(now) {
 
 
     // **************** creating buffers
-    positionBufferMaterial.side = THREE.BackSide;
+    for(let i = 0; i < scene.children.length; i++) {
+        scene.children[i].savedMaterial = scene.children[i].material;
 
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].savedMaterial = culledScene.children[i].material;
-        culledScene.children[i].material = positionBufferMaterial;
+        if(scene.children[i].savedMaterial.side == THREE.BackSide) {
+            scene.children[i].material = positionBufferMaterialCulled;
+        } else {
+            scene.children[i].material = positionBufferMaterial;
+        }
+
     }
 
     renderer.setRenderTarget(positionRT);
     renderer.clear();
-    renderer.render( culledScene, camera );
+    renderer.render( scene, camera );
 
     renderer.setRenderTarget(hrPositionRT);
     renderer.clear();
-    renderer.render( culledScene, camera );
+    renderer.render( scene, camera );
 
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].material = culledScene.children[i].savedMaterial;
+    for(let i = 0; i < scene.children.length; i++) {
+        scene.children[i].material = scene.children[i].savedMaterial;
     }
-
-    // ---
-
-    positionBufferMaterial.side = THREE.DoubleSide;
-
-    for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].savedMaterial = nonCulledScene.children[i].material;
-        nonCulledScene.children[i].material = positionBufferMaterial;
-    }
-
-    renderer.setRenderTarget(positionRT);
-    renderer.render( nonCulledScene, camera );
-
-    renderer.setRenderTarget(hrPositionRT);
-    renderer.render( nonCulledScene, camera );
-
-    for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].material = nonCulledScene.children[i].savedMaterial;
-    }
-
-
-
-
 
 
 
@@ -610,92 +568,59 @@ function animate(now) {
 
     // at this point all meshes have their material-materials assigned
     // ******* creating emission buffer ********
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].material.uniforms.uStep.value = 0;
+    for(let i = 0; i < scene.children.length; i++) {
+        scene.children[i].material.uniforms.uStep.value = 0;
     }
     renderer.setRenderTarget(emissionRT);
     renderer.clear();
-    renderer.render( culledScene, camera );
-    // ---
-    for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].material.uniforms.uStep.value = 0;
-    }
-    renderer.render( nonCulledScene, camera );
+    renderer.render( scene, camera );
 
     // ******* creating albedo buffer ********
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].material.uniforms.uStep.value = 1;
+    for(let i = 0; i < scene.children.length; i++) {
+        scene.children[i].material.uniforms.uStep.value = 1;
     }
     renderer.setRenderTarget(albedoRT);
     renderer.clear();
-    renderer.render( culledScene, camera );
-    // ---
-    for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].material.uniforms.uStep.value = 1;
-    }
-    renderer.render( nonCulledScene, camera );
+    renderer.render( scene, camera );
+
     // ******* creating material buffer ********
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].material.uniforms.uStep.value = 2;
+    for(let i = 0; i < scene.children.length; i++) {
+        scene.children[i].material.uniforms.uStep.value = 2;
     }
     renderer.setRenderTarget(materialRT);
     renderer.clear();
-    renderer.render( culledScene, camera );
-    // ---
-    for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].material.uniforms.uStep.value = 2;
-    }
-    renderer.render( nonCulledScene, camera );
+    renderer.render( scene, camera );
+   
 
 
 
 
 
-
-
-
-    normalBufferMaterial.side = THREE.BackSide;
     normalBufferMaterial.uniforms.uCameraPos.value = camera.position;
+    normalBufferMaterialCulled.uniforms.uCameraPos.value = camera.position;
 
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].savedMaterial = culledScene.children[i].material;
-        culledScene.children[i].material = normalBufferMaterial;
+    for(let i = 0; i < scene.children.length; i++) {
+        scene.children[i].savedMaterial = scene.children[i].material;
+
+        if(scene.children[i].savedMaterial.side == THREE.BackSide) {
+            scene.children[i].material = normalBufferMaterialCulled;
+        } else {
+            scene.children[i].material = normalBufferMaterial;
+        }
     }
 
     renderer.setRenderTarget(normalRT);
     renderer.clear();
-    renderer.render( culledScene, camera );
+    renderer.render( scene, camera );
 
     renderer.setRenderTarget(hrNormalRT);
     renderer.clear();
-    renderer.render( culledScene, camera );
+    renderer.render( scene, camera );
 
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].material = culledScene.children[i].savedMaterial;
+    for(let i = 0; i < scene.children.length; i++) {
+        scene.children[i].material = scene.children[i].savedMaterial;
     }
     
-    // ---
-
-    normalBufferMaterial.side = THREE.DoubleSide;
-
-    for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].savedMaterial = nonCulledScene.children[i].material;
-        nonCulledScene.children[i].material = normalBufferMaterial;
-    }
-
-    renderer.setRenderTarget(normalRT);
-    renderer.render( nonCulledScene, camera );
-
-    renderer.setRenderTarget(hrNormalRT);
-    renderer.render( nonCulledScene, camera );
-
-    for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].material = nonCulledScene.children[i].savedMaterial;
-    }
-
-
-
-
 
 
 
@@ -726,20 +651,20 @@ function animate(now) {
 
         radianceFrameCount++;
     }
-        // ************** accumulating radiance 
-        radianceRT.swap_rt2_rt3();
+    // ************** accumulating radiance 
+    radianceRT.swap_rt2_rt3();
 
-        renderer.setRenderTarget(radianceRT.rt3);
-        renderer.clear();
-        displayQuadMesh.material = radianceAccumMaterial;
-        radianceAccumMaterial.uniforms.uCurrentRadiance.value = radianceRT.rt1.texture;
-        radianceAccumMaterial.uniforms.uAccumulatedRadiance.value = radianceRT.rt2.texture;
-        radianceAccumMaterial.uniforms.uHistoryBuffer.value = historyRT.rt3.texture;
-        radianceAccumMaterial.uniforms.uMomentMoveBuffer.value = momentMoveRT.texture;
-        radianceAccumMaterial.uniforms.uMaxFramesHistory.value = controller.maxFramesHistory;
-        radianceAccumMaterial.uniforms.uRadianceLambdaFix.value = controller.radianceLambdaFix_;
-        renderer.render(displayScene, camera );
-        // ************** accumulating radiance - END
+    renderer.setRenderTarget(radianceRT.rt3);
+    renderer.clear();
+    displayQuadMesh.material = radianceAccumMaterial;
+    radianceAccumMaterial.uniforms.uCurrentRadiance.value = radianceRT.rt1.texture;
+    radianceAccumMaterial.uniforms.uAccumulatedRadiance.value = radianceRT.rt2.texture;
+    radianceAccumMaterial.uniforms.uHistoryBuffer.value = historyRT.rt3.texture;
+    radianceAccumMaterial.uniforms.uMomentMoveBuffer.value = momentMoveRT.texture;
+    radianceAccumMaterial.uniforms.uMaxFramesHistory.value = controller.maxFramesHistory;
+    radianceAccumMaterial.uniforms.uRadianceLambdaFix.value = controller.radianceLambdaFix_;
+    renderer.render(displayScene, camera );
+    // ************** accumulating radiance - END
 
 
     // **************** creating buffers - END
@@ -805,13 +730,6 @@ function animate(now) {
     // displayQuadMesh.material.uniforms.uTexture.value = radianceRT.rt3.texture;
     displayQuadMesh.material.uniforms.uTexture.value = atrousRT.write.texture;
     displayQuadMesh.material.uniforms.uExposure.value = controller.exposure;
-    // if(kpress) {
-    //     // displayQuadMesh.material.uniforms.uTexture.value = momentMoveRT.texture;
-    //     // displayQuadMesh.material.uniforms.uTexture.value = normalRT.texture;
-    //     // displayQuadMesh.material.uniforms.uTexture.value = historyRT.rt1.texture;
-    //     // displayQuadMesh.material.uniforms.uTexture.value = historyRT.rt3.texture;
-    //     displayQuadMesh.material.uniforms.uTexture.value = radianceRT.rt3.texture;
-    // }
         
     if(kpress) displayQuadMesh.material.uniforms.uTexture.value = radianceRT.rt3.texture;
     if(lpress) displayQuadMesh.material.uniforms.uTexture.value = normalRT.texture;
@@ -825,8 +743,6 @@ function animate(now) {
 
     renderer.clear();
     renderer.render(displayScene, camera);
-
-
 
 
 	stats.end();

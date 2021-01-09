@@ -9,7 +9,7 @@ let perlinNoiseEmissiveMaterial;
 let emissiveTestMaterial;
 let testMaterial;
 
-function createScene(culledScene, nonCulledScene) {
+function createScene(scene) {
     let em = 10;
     emissiveTestMaterial = new THREE.ShaderMaterial({
         uniforms: {
@@ -55,14 +55,14 @@ function createScene(culledScene, nonCulledScene) {
    
     
     window.cornellBoxMesh  = new THREE.Mesh(new THREE.BoxBufferGeometry(10, 10, 10), culledTestMaterial);
-    culledScene.add(cornellBoxMesh);
+    scene.add(cornellBoxMesh);
 
     // window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(2, 0.1, 2), emissiveTestMaterial);
     // window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(0.1, 5, 5), emissiveTestMaterial);
     // lightBoxMesh1.position.set(-4.9, -2, 0);
     window.lightBoxMesh1   = new THREE.Mesh(new THREE.BoxBufferGeometry(8, 0.1, 8), emissiveTestMaterial);
     lightBoxMesh1.position.set(0, +4.9, 0);
-    nonCulledScene.add(lightBoxMesh1);
+    scene.add(lightBoxMesh1);
 
 
 
@@ -118,7 +118,7 @@ function createScene(culledScene, nonCulledScene) {
             box.basePosition = [box.position.x, box.position.y, box.position.z];
             boxes.push(box);
 
-            nonCulledScene.add(box);
+            scene.add(box);
         }
     }
 
@@ -133,12 +133,12 @@ function createScene(culledScene, nonCulledScene) {
     window.cbox1 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), cornellBRedMat);
     cbox1.position.set(+4.9975, 0, 0);
     cbox1.rotation.y = Math.PI * 0.5;
-    culledScene.add(cbox1);
+    scene.add(cbox1);
     
     window.cbox2 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), cornellBGreenMat);
     cbox2.position.set(-4.9975, 0, 0);
     cbox2.rotation.y = -Math.PI * 0.5;
-    culledScene.add(cbox2);
+    scene.add(cbox2);
 
     // window.cbox3 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), new THREE.ShaderMaterial({ uniforms: { "uEmissive": { value: new THREE.Vector3(0,0,0) },
     // "uAlbedo": { value: new THREE.Vector3(1,1,1) }, "uStep": { value: 0 }, "uRoughness": { value: 0 },
@@ -146,7 +146,7 @@ function createScene(culledScene, nonCulledScene) {
     // }));
     // cbox3.position.set(0, -4.9975, 0);
     // cbox3.rotation.x = Math.PI * 0.5;
-    // culledScene.add(cbox3);
+    // scene.add(cbox3);
 
     // cbox2.material = perlinNoiseEmissiveMaterial;
     // perlinNoiseEmissiveMaterial.side = THREE.BackSide;
@@ -175,7 +175,7 @@ function createScene(culledScene, nonCulledScene) {
             mesh.rotateY(-0.635);
             mesh.scale.set(-1, 1, 1);
             mesh.position.set(-2, -5, -3);
-            nonCulledScene.add( mesh );
+            scene.add( mesh );
 
 
             mesh2.material = new THREE.ShaderMaterial({ uniforms: { 
@@ -188,7 +188,7 @@ function createScene(culledScene, nonCulledScene) {
             // mesh2.material = perlinNoiseEmissiveMaterial
             mesh2.rotateY(+0.635);
             mesh2.position.set(+2, -5, -3);
-            nonCulledScene.add( mesh2 );
+            scene.add( mesh2 );
         },
         // called when loading is in progresses
         function ( xhr ) {
@@ -204,7 +204,7 @@ function createScene(culledScene, nonCulledScene) {
 
     window.addEventListener("keypress", (e) => {
         if(e.key == "e") {
-            sceneSwitch(culledScene, nonCulledScene);
+            sceneSwitch(scene);
         }
         if(e.key == "r") {
             switchLights();
@@ -212,32 +212,14 @@ function createScene(culledScene, nonCulledScene) {
     });
 }
 
-function updateScene(now, culledScene, nonCulledScene) {
+function updateScene(now, scene) {
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
-    for(let i = 0; i < culledScene.children.length; i++) {
-        culledScene.children[i].oldWorldMatrix = culledScene.children[i].matrixWorld.clone();
-    }
-    for(let i = 0; i < nonCulledScene.children.length; i++) {
-        nonCulledScene.children[i].oldWorldMatrix = nonCulledScene.children[i].matrixWorld.clone();
+    for(let i = 0; i < scene.children.length; i++) {
+        scene.children[i].oldWorldMatrix = scene.children[i].matrixWorld.clone();
     }
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
-
-
-
-
-    // lightBoxMesh1.rotateX(0.06);
-    // lightBoxMesh1.rotateY(0.03);
-    // lightBoxMesh1.rotateZ(0.02);
-    // lightBoxMesh1.position.set(-3, Math.cos(now * 0.3) * 3, -3);
-    // lightBoxMesh1.updateMatrixWorld();
-    
-    // lightBoxMesh2.rotateX(0.03);
-    // lightBoxMesh2.rotateY(0.02);
-    // lightBoxMesh2.rotateZ(0.01);
-    // lightBoxMesh2.position.set(+3, Math.cos(now * 0.5) * 3, +3);
-    // lightBoxMesh2.updateMatrixWorld();
 
     for(let i = 0; i < boxes.length; i++) {
         boxes[i].rotateX(boxes[i].rotXSpeed);
@@ -258,13 +240,13 @@ function updateScene(now, culledScene, nonCulledScene) {
     }
 }
 
-function sceneSwitch(culledScene, nonCulledScene) {
+function sceneSwitch(scene) {
     sceneType = (sceneType + 1) % 2;
 
     if(sceneType === 1) {
         cbox2.material = perlinNoiseEmissiveMaterial;
         perlinNoiseEmissiveMaterial.side = THREE.BackSide;
-        nonCulledScene.remove(lightBoxMesh1);
+        scene.remove(lightBoxMesh1);
         for(let i = 0; i < window.boxes.length; i++) {
             if(!window.boxes[i].material.uniforms.uEmissiveRef) {
                 window.boxes[i].material.uniforms.uEmissiveRef = { value: window.boxes[i].material.uniforms.uEmissive.value.clone() };
@@ -272,7 +254,7 @@ function sceneSwitch(culledScene, nonCulledScene) {
             window.boxes[i].material.uniforms.uEmissive.value = new THREE.Vector3(0,0,0);
         }
     } else {
-        nonCulledScene.add(lightBoxMesh1);
+        scene.add(lightBoxMesh1);
         cbox2.material = cornellBGreenMat;
         
         for(let i = 0; i < window.boxes.length; i++) {
@@ -294,16 +276,9 @@ function switchSceneLights() {
     for(let i = 0; i < window.boxes.length; i++) {
         let emss = new THREE.Vector3(0,0,0);
         let ra = Math.random();
-        // if (ra < 0.2) {
-        //     emss = new THREE.Vector3(10,1,1);
-        // }
-        // if(ra < 0.1) {
-        //     emss = new THREE.Vector3(1,10,1);
-        // }
         if(ra < 0.15) {
             emss = new THREE.Vector3(Math.random() * 10, Math.random() * 10, Math.random() * 10);
         }
-
 
         if(noLights) {
             emss = new THREE.Vector3(0,0,0);

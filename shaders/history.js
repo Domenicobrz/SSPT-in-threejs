@@ -101,6 +101,7 @@ void main() {
     if(length(oldWorldPosition - vWorldFragPos) > 0.175) success = vec3(0.0);
     // if(length(oldRadiance - radiance) > 0.35) success = vec3(0.0);
 
+
     gl_FragColor = vec4(success, 1.0);
 }
 `;
