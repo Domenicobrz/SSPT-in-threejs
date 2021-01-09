@@ -1,0 +1,18 @@
+***********
+
+Performance improvements:
+- reduce matrix multiplications?
+- reduce texture fetches?
+
+***********
+
+next steps:
+- double check p_phi in history tests
+  also the weights are not multiplied
+- support nested meshes (now it's only first-level, because we're not traversing the scene when overriding materials)
+- support envmaps
+?- proper refactor
+?- always accepting lightsources hits?
+?- proper objects thickness SSR checks?
+?- how to support vertex-shader displaced vertices? atm you can only use matrices
+?- glass objects
