@@ -14,6 +14,7 @@ uniform float uFeedbackLoopFactor;
 uniform sampler2D uRadianceAccumRT;
 uniform sampler2D uAtrousRT;
 uniform sampler2D uHistory;
+uniform sampler2D uMaterial;
 
 uniform float uMaxFramesHistory; 
 
@@ -23,9 +24,15 @@ void main() {
 
     float maxFrames = uMaxFramesHistory;
     float history = min(texture2D(uHistory, vUv).x, maxFrames) / maxFrames;
+    vec4 material = texture2D(uMaterial, vUv);
 
     // float factor = uFeedbackLoopFactor * (1.0 - history);
     float factor = uFeedbackLoopFactor;
+
+    // shiny materials fix
+    float roughness = material.x;
+    factor *= roughness;
+
 
     gl_FragColor = col1 * (1.0 - factor) + col2 * (factor);
 }

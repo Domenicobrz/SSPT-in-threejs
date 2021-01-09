@@ -11,7 +11,7 @@ import { historyTest_fs, historyTest_vs, historyAccum_fs, historyAccum_vs } from
 import { radianceAccum_fs, radianceAccum_vs } from "./shaders/radianceAccum.js";
 import { standardMaterial_fs, standardMaterial_vs } from "./shaders/standardMaterial.js";
 import { feedbackloop_fs, feedbackloop_vs } from "./shaders/feedbackloop.js";
-import { createScene, updateScene } from "./scene.js";
+import { createScene, updateScene, switchSceneLights } from "./scene.js";
 import * as dat from './dependencies/dat.gui.js';
 import Stats from "./dependencies/stats.js";
 
@@ -26,6 +26,7 @@ let renderer;
 let pmremGenerator;
 let hdrCubeRenderTarget;
 let HDRtexture;
+let radianceFrameCount = 0;
 
 let albedoRT;
 let positionRT;
@@ -94,7 +95,8 @@ function init() {
 
     controls = new OrbitControls( camera, renderer.domElement );
     controls.enableDamping = true;
-    controls.dampingFactor = 0.0875;
+    // controls.dampingFactor = 0.0875;
+    controls.dampingFactor = 0.1875;
     controls.enablePan = true;
     controls.panSpeed = 1.0;
     controls.screenSpacePanning = true;
@@ -164,14 +166,25 @@ function init() {
     radianceBufferMaterial = new THREE.ShaderMaterial({
         uniforms: {
             "uRadMult":    { value: 1 },
+            "uTotSamples": { value: 1 },
+            "uCurrSample": { value: 1 },
+            "uLowHistorySamples": { value: 1 },
             "uCameraPos":    { value: camera.position },
             "uCameraTarget": { value: controls.target },
             "uAspectRatio": { value: pr_width / pr_height },
             "uRandom": { value: new THREE.Vector4(0, 0, 0, 0) },
             "uTime": { value: 0 },
+            "uFrame": { value: 0 },
+            "uSSRQuality": { value: 0 },
+            "uSSRSteps": { value: 0 },
+            "uSSRBinarySteps": { value: 0 },
+            "uSSRBounces": { value: 0 },
+            "uSSRJitter": { value: 0 },
+            "uSSRStepMult": { value: 0 },
+            "uSSRStartingStep": { value: 0 },
+            "uMaxIntersectionDepthDistance": { value: 0.5 },
 
-            "uMirrorIndex": { value: 1 },
-
+            "uHistoryBuffer":  { type: "t", value: historyRT.rt3.texture },
             "uMaterialBuffer": { type: "t", value: materialRT.texture },
             "uAlbedoBuffer":   { type: "t", value: albedoRT.texture },
             "uPositionBuffer": { type: "t", value: positionRT.texture },
@@ -206,6 +219,7 @@ function init() {
             "uC_phi": { value: 0.0 },
             "uN_phi": { value: 0.0 },
             "uP_phi": { value: 0.0 },
+            "uH_phi": { value: 0.0 },
         },
         fragmentShader: atrous_fs,
         vertexShader: atrous_vs,
@@ -216,6 +230,7 @@ function init() {
         uniforms: {
             "uNormalBuffer":   { type: "t", value: normalRT.texture   },
             "uPositionBuffer": { type: "t", value: positionRT.texture },
+            "uRadianceBuffer": { type: "t", value: radianceRT.rt3.texture },
             "uMomentMove":     { type: "t", value: momentMoveRT.texture },
             "uCameraPos":      { type: "t", value: camera.position },
             "uInvScreenSize":  { value: new THREE.Vector2(1 / pr_width, 1 / pr_height) },
@@ -244,6 +259,7 @@ function init() {
             "uHistoryBuffer": { type: "t", value: null },
             "uMomentMoveBuffer": { type: "t", value: null },
             "uMaxFramesHistory": { type: "t", value: null },
+            "uRadianceLambdaFix": { value: 0 },
         },
         fragmentShader: radianceAccum_fs,
         vertexShader: radianceAccum_vs,
@@ -255,6 +271,7 @@ function init() {
             "uHistory": { type: "t",  value: null },
             "uRadianceAccumRT": { type: "t",  value: null },
             "uAtrousRT": { type: "t", value: null },
+            "uMaterial": { type: "t", value: materialRT.texture },
             "uFeedbackLoopFactor": { value: 0 },
             "uMaxFramesHistory": { value: 0 },
         },
@@ -685,16 +702,29 @@ function animate(now) {
 
     renderer.setRenderTarget(radianceRT.rt1);
     renderer.clear();
-    for(let i = 0; i < controller.spp; i++) {
+    for(let i = 0; i < controller.spp + controller.lowhsspp; i++) {
         renderer.setRenderTarget(radianceRT.rt1);
-        radianceBufferMaterial.uniforms.uRadMult.value = 1 / (controller.spp);
+        // radianceBufferMaterial.uniforms.uRadMult.value    = 1 / (controller.spp);
+        radianceBufferMaterial.uniforms.uTotSamples.value = (controller.spp + controller.lowhsspp);
+        radianceBufferMaterial.uniforms.uCurrSample.value = i;
+        radianceBufferMaterial.uniforms.uLowHistorySamples.value = controller.lowhsspp;
         radianceBufferMaterial.uniforms.uCameraPos.value = camera.position;
         radianceBufferMaterial.uniforms.uCameraTarget.value = controls.target;
         radianceBufferMaterial.uniforms.uRandom.value = new THREE.Vector4(Math.random(), Math.random(), Math.random(), Math.random());
         radianceBufferMaterial.uniforms.uTime.value = now;
-        radianceBufferMaterial.uniforms.uMirrorIndex.value = controller.mirrorIndex;
+        radianceBufferMaterial.uniforms.uFrame.value = radianceFrameCount % 256;
+        radianceBufferMaterial.uniforms.uSSRQuality.value = controller.ssrQuality;
+        radianceBufferMaterial.uniforms.uSSRSteps.value = controller.ssrSteps;
+        radianceBufferMaterial.uniforms.uSSRBinarySteps.value = controller.ssrBinarySteps;
+        radianceBufferMaterial.uniforms.uSSRBounces.value = controller.ssrBounces;
+        radianceBufferMaterial.uniforms.uSSRJitter.value = controller.ssrJitter;
+        radianceBufferMaterial.uniforms.uSSRStepMult.value = controller.ssrStepMult;
+        radianceBufferMaterial.uniforms.uSSRStartingStep.value = controller.ssrStartingStep;
+        radianceBufferMaterial.uniforms.uMaxIntersectionDepthDistance.value = controller.maxIntersectionDepthDistance;
         displayQuadMesh.material = radianceBufferMaterial;
         renderer.render(displayScene, camera );
+
+        radianceFrameCount++;
     }
         // ************** accumulating radiance 
         radianceRT.swap_rt2_rt3();
@@ -707,6 +737,7 @@ function animate(now) {
         radianceAccumMaterial.uniforms.uHistoryBuffer.value = historyRT.rt3.texture;
         radianceAccumMaterial.uniforms.uMomentMoveBuffer.value = momentMoveRT.texture;
         radianceAccumMaterial.uniforms.uMaxFramesHistory.value = controller.maxFramesHistory;
+        radianceAccumMaterial.uniforms.uRadianceLambdaFix.value = controller.radianceLambdaFix_;
         renderer.render(displayScene, camera );
         // ************** accumulating radiance - END
 
@@ -720,6 +751,7 @@ function animate(now) {
     atrousMaterial.uniforms.uN_phi.value = controller.n_phi;
     atrousMaterial.uniforms.uP_phi.value = controller.p_phi;
     atrousMaterial.uniforms.uC_phi.value = controller.c_phi;
+    atrousMaterial.uniforms.uH_phi.value = controller.h_phi;
 
     renderer.setRenderTarget(atrousRT.write);
     atrousMaterial.uniforms.uRadiance.value = radianceRT.rt3.texture;
@@ -788,7 +820,7 @@ function animate(now) {
     if(ppress) displayQuadMesh.material.uniforms.uTexture.value = historyRT.rt3.texture;
     if(npress) displayQuadMesh.material.uniforms.uTexture.value = momentMoveRT.texture;
     if(mpress) displayQuadMesh.material.uniforms.uTexture.value = radianceRT.rt1.texture;
-    if(ipress) displayQuadMesh.material.uniforms.uTexture.value = hrNormalRT.texture;
+    if(ipress) displayQuadMesh.material.uniforms.uTexture.value = emissionRT.texture;
     if(bpress) displayQuadMesh.material.uniforms.uTexture.value = albedoRT.texture;
 
     renderer.clear();
@@ -807,89 +839,178 @@ function initGUI() {
 
     var GUIcontroller = function() {
         this.c_phi = 105;
-        this.n_phi = 0.01;
-        this.p_phi = 0.2;
+        this.n_phi = 0.007;
+        this.p_phi = 0.15;
+        this.h_phi = 1;
 
         this.c_phiMultPerIt = 1;
 
-        this.stepMultiplier = 1.365;
+        this.stepMultiplier = 1.4;
         this.iterations = 10;
 
-        this.atrous5x5 = false;
+        this.atrous5x5 = true;
 
-        this.maxFramesHistory = 10;
-        this.filterHistoryModulation = 0.5;
-        this.feedbackLoopFactor = 0;
+        this.maxFramesHistory = 5;
+        this.filterHistoryModulation = 0.88;
+        this.feedbackLoopFactor = 0.3;
         this.exposure = -1;
-        this.spp = 1;
-        this.mirrorIndex = 1;
+        this.spp = 3;
+        this.lowhsspp = 0;
 
-        this.lowQuality = function() {
-            this.spp = 1;
-            this.iterations = 7;
-            this.filterHistoryModulation = 0.37;
-            this.stepMultiplier = 1.7;
-            this.atrous5x5 = false;
-            this.maxFramesHistory = 10;
-            this.c_phiMultPerIt = 0.34;
+        this.ssrQuality = 2;
+        this.ssrSteps   = 15;
+        this.ssrBinarySteps = 5;
+        this.ssrJitter = 0;
+        this.ssrBounces = 3;
+        this.ssrStepMult = 1.375;
+        this.ssrStartingStep = 0.1;
+        this.maxIntersectionDepthDistance = 0.5;
+
+        this.radianceLambdaFix_ = 1;
+        this.radianceLambdaFix = true;
+
+        this.lowest = function() {
             this.c_phi = 105;
-            this.n_phi = 0.01;
-            this.p_phi = 1;
-
-            this.updateGUI();
-        };  
-
-        this.mediumQuality = function() {
-            this.spp = 2;
-            this.iterations = 8;
-            this.c_phiMultPerIt = 0.36;
-            this.filterHistoryModulation = 0.42;
-            this.stepMultiplier = 1.6;
-            this.c_phi = 105;
-            this.n_phi = 0.01;
-            this.p_phi = 1;
-            this.maxFramesHistory = 10;
-            this.atrous5x5 = false;
-
-            this.updateGUI();
-        };  
-
-        this.highQuality = function() {
-            this.c_phi = 105;
-            this.n_phi = 0.01;
-            this.p_phi = 1;
+            this.n_phi = 0.007;
+            this.p_phi = 0.15;
+            this.h_phi = 1;
     
-            this.c_phiMultPerIt = 0.34;
+            this.ssrQuality = 0;
+            this.maxIntersectionDepthDistance = 0.15;
+          
+            this.c_phiMultPerIt = 1;
     
-            this.stepMultiplier = 1.5;
+            this.stepMultiplier = 1.4;
             this.iterations = 10;
     
-            this.atrous5x5 = false;
+            this.atrous5x5 = true;
     
-            this.maxFramesHistory = 10;
-            this.filterHistoryModulation = 0.54;
-            this.spp = 3;
+            this.maxFramesHistory = 12;
+            this.filterHistoryModulation = 0.85;
+            this.spp = 1;
+
+            this.radianceLambdaFix_ = 1;
+            this.radianceLambdaFix  = true;
+
+            this.feedbackLoopFactor = 1;
 
             this.updateGUI();
         }
 
-        this.veryHighQuality = function() {
+        this.low = function() {
             this.c_phi = 105;
-            this.n_phi = 0.01;
-            this.p_phi = 1;
+            this.n_phi = 0.007;
+            this.p_phi = 0.15;
+            this.h_phi = 1;
     
-            this.c_phiMultPerIt = 0.34;
+            this.ssrQuality = 1;
+            this.maxIntersectionDepthDistance = 0.24;
+          
+            this.c_phiMultPerIt = 1;
     
-            this.stepMultiplier = 1.47;
+            this.stepMultiplier = 1.4;
             this.iterations = 10;
     
-            this.atrous5x5 = false;
+            this.atrous5x5 = true;
     
-            this.maxFramesHistory = 7;
-            this.filterHistoryModulation = 0.35;
-            this.spp = 5;
+            this.maxFramesHistory = 5;
+            this.filterHistoryModulation = 0.78;
+            this.spp = 2;
+
+            this.radianceLambdaFix_ = 1;
+            this.radianceLambdaFix  = true;
+
+            this.feedbackLoopFactor = 0.32;
 
             this.updateGUI();
+        }
+
+        this.medium = function() {
+            this.c_phi = 105;
+            this.n_phi = 0.007;
+            this.p_phi = 0.15;
+            this.h_phi = 1;
+
+            this.ssrQuality = 2;
+            this.maxIntersectionDepthDistance = 0.5;
+    
+            this.c_phiMultPerIt = 1;
+    
+            this.stepMultiplier = 1.4;
+            this.iterations = 10;
+    
+            this.atrous5x5 = true;
+    
+            this.maxFramesHistory = 5;
+            this.filterHistoryModulation = 0.85;
+            this.spp = 3;
+
+            this.radianceLambdaFix_ = 1;
+            this.radianceLambdaFix  = true;
+
+            this.feedbackLoopFactor = 0.3;
+
+            this.updateGUI();
+        }
+
+        this.high = function() {
+            this.c_phi = 105;
+            this.n_phi = 0.007;
+            this.p_phi = 0.15;
+            this.h_phi = 1;
+    
+            this.ssrQuality = 3;
+            this.maxIntersectionDepthDistance = 0.25;
+
+            this.c_phiMultPerIt = 1;
+    
+            this.stepMultiplier = 1.4;
+            this.iterations = 8;
+    
+            this.atrous5x5 = true;
+    
+            this.maxFramesHistory = 4;
+            this.filterHistoryModulation = 0.79;
+            this.spp = 6;
+
+            this.radianceLambdaFix_ = 1;
+            this.radianceLambdaFix  = true;
+
+            this.feedbackLoopFactor = 1;
+
+            this.updateGUI();
+        }
+
+        this.iCantEvenTestThisProperly = function() {
+            this.c_phi = 105;
+            this.n_phi = 0.007;
+            this.p_phi = 0.15;
+            this.h_phi = 1;
+    
+            this.ssrQuality = 3;
+            this.maxIntersectionDepthDistance = 0.25;
+
+            this.c_phiMultPerIt = 1;
+    
+            this.stepMultiplier = 1.4;
+            this.iterations = 8;
+    
+            this.atrous5x5 = true;
+    
+            this.maxFramesHistory = 4;
+            this.filterHistoryModulation = 0.85;
+            this.spp = 10;
+
+            this.radianceLambdaFix_ = 1;
+            this.radianceLambdaFix  = true;
+
+            this.feedbackLoopFactor = 0.6;
+
+            this.updateGUI();
+        }
+
+        this.switchLights = function() {
+            switchSceneLights();
         }
 
         this.updateGUI = function() {
@@ -912,18 +1033,22 @@ function initGUI() {
 
 
     var wff = gui.addFolder('Wavelet Filter');
-    var ptf = gui.addFolder('Path Tracer');
+    var rmf = gui.addFolder('Ray Marcher');
     var rpf = gui.addFolder('Reprojection Params');
     var qpf = gui.addFolder('Quality Presets');
+    var fff = gui.addFolder('For fun');
 
     wff.add(controller, 'c_phi', 0, 2000).onChange(function(value) {
         atrousMaterial.uniforms.uC_phi.value = value;
     });
-    wff.add(controller, 'n_phi', 0.01, 30).onChange(function(value) {
+    wff.add(controller, 'n_phi', 0.001, 30).onChange(function(value) {
         atrousMaterial.uniforms.uN_phi.value = value;
     }); 
     wff.add(controller, 'p_phi', 0, 30).onChange(function(value) {
         atrousMaterial.uniforms.uP_phi.value = value;
+    }); 
+    wff.add(controller, 'h_phi', 0, 30).onChange(function(value) {
+        atrousMaterial.uniforms.uH_phi.value = value;
     }); 
     wff.add(controller, 'c_phiMultPerIt', 0, 4);
     wff.add(controller, 'stepMultiplier', 0, 5);
@@ -943,24 +1068,45 @@ function initGUI() {
         atrousMaterial.needsUpdate = true;
     });
 
-    ptf.add(controller, 'exposure', -1, 10);
-    ptf.add(controller, 'spp', 1, 15).step(1);
-    ptf.add(controller, 'mirrorIndex', 1, 4).step(1);
+    rmf.add(controller, 'exposure', -10, 10);
+    rmf.add(controller, 'spp', 1, 15).step(1);
+    rmf.add(controller, 'lowhsspp', 0, 10).step(1);
 
-    rpf.add(controller, 'maxFramesHistory', 0, 100).step(1);
+    rmf.add(controller, 'ssrQuality', 0, 5).step(1);
+    rmf.add(controller, 'ssrSteps', 1, 50).step(1);
+    rmf.add(controller, 'ssrBinarySteps', 1, 20).step(1);
+    rmf.add(controller, 'ssrBounces', 0, 5).step(1);
+    rmf.add(controller, 'ssrJitter', 0, 1);
+    rmf.add(controller, 'ssrStepMult', 1, 4);
+    rmf.add(controller, 'ssrStartingStep', 0, 1);
+    rmf.add(controller, 'maxIntersectionDepthDistance', 0, 5);
+
+
+    rpf.add(controller, 'maxFramesHistory', 0, 20).step(1);
     rpf.add(controller, 'filterHistoryModulation', 0, 1);
-
-    qpf.add(controller, 'lowQuality');
-    qpf.add(controller, 'mediumQuality');
-    qpf.add(controller, 'highQuality');
-    qpf.add(controller, 'veryHighQuality');
+    rpf.add(controller, 'radianceLambdaFix').onChange(() => {
+        controller.radianceLambdaFix_ = controller.radianceLambdaFix ? 1 : 0;
+    });
 
 
+    qpf.add(controller, 'lowest');
+    qpf.add(controller, 'low');
+    qpf.add(controller, 'medium');
+    qpf.add(controller, 'high');
+    qpf.add(controller, 'iCantEvenTestThisProperly');
 
-    wff.open();
-    ptf.open();
-    rpf.open();
+    fff.add(controller, 'switchLights');
+
+
+    // wff.open();
+    // ptf.open();
+    // rpf.open();
+    // ssrf.open();
     qpf.open();
+    fff.open();
+
+
+    controller.medium();
 }
 
 
