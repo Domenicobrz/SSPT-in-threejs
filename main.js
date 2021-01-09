@@ -1,7 +1,6 @@
 import * as THREE from "./dependencies/three.module.js";
 import { OrbitControls } from "./dependencies/orbitControls.js";
 import { position_fs, position_vs } from "./shaders/position.js";
-import { material_fs, material_vs } from "./shaders/material.js";
 import { normal_fs, normal_vs } from "./shaders/normals.js";
 import { display_fs, display_vs } from "./shaders/display.js";
 import { makeSceneShaders } from "./shaders/radiance.js";
@@ -9,23 +8,21 @@ import { atrous_fs, atrous_vs } from "./shaders/atrous.js";
 import { momentMove_fs, momentMove_vs } from "./shaders/momentMove.js";
 import { historyTest_fs, historyTest_vs, historyAccum_fs, historyAccum_vs } from "./shaders/history.js";
 import { radianceAccum_fs, radianceAccum_vs } from "./shaders/radianceAccum.js";
-import { standardMaterial_fs, standardMaterial_vs } from "./shaders/standardMaterial.js";
 import { feedbackloop_fs, feedbackloop_vs } from "./shaders/feedbackloop.js";
-import { createScene, updateScene, switchSceneLights } from "./scene.js";
-import * as dat from './dependencies/dat.gui.js';
+import { createDoubleFBO, createTripleFBO } from "./utils.js";
+import { createScene, updateScene } from "./scene.js";
 import Stats from "./dependencies/stats.js";
-
+import { controller, initGUI } from "./gui.js";
 
 window.addEventListener("load", init);
 
 let scene; 
 let displayScene;
+let momentBufferScene;
+
 let camera;
 let controls;
 let renderer;
-let pmremGenerator;
-let hdrCubeRenderTarget;
-let HDRtexture;
 let radianceFrameCount = 0;
 
 let albedoRT;
@@ -54,17 +51,8 @@ let atrousMaterial;
 let feedbackLoopMaterial;
 
 let displayQuadMesh;
-let mesh;
 
-let kpress;
-let lpress;
-let opress;
-let ppress;
-let jpress;
-let npress;
-let mpress;
-let ipress;
-let bpress;
+let kpress, lpress, opress, ppress, jpress, npress, mpress, ipress, bpress;
 
 let pixelRatio = 0.5;
 let pr_width   = Math.floor(innerWidth  * pixelRatio);
@@ -74,7 +62,6 @@ var stats = new Stats();
 stats.showPanel( 0 ); // 0: fps, 1: ms, 2: mb, 3+: custom
 document.body.appendChild( stats.dom );
 
-let momentBufferScene;
 
 function init() {
     renderer = new THREE.WebGLRenderer({ antialias: false });
@@ -83,7 +70,6 @@ function init() {
     renderer.toneMappingExposure = 0.8;
     renderer.outputEncoding = THREE.sRGBEncoding;
     renderer.autoClear = false;
-    // renderer.setPixelRatio(pixelRatio);
     document.body.appendChild( renderer.domElement );
 
     scene = new THREE.Scene();
@@ -93,13 +79,11 @@ function init() {
 
     controls = new OrbitControls( camera, renderer.domElement );
     controls.enableDamping = true;
-    // controls.dampingFactor = 0.0875;
     controls.dampingFactor = 0.1875;
     controls.enablePan = true;
     controls.panSpeed = 1.0;
     controls.screenSpacePanning = true;
 
-    //controls.update() must be called after any manual changes to the camera's transform
     camera.position.set( 0, 1, 18 );
     controls.target.set( 0, 0, 0 );
     controls.update();
@@ -134,7 +118,6 @@ function init() {
     atrousRT = createDoubleFBO(pr_width, pr_height, filterMode);
     historyRT = createTripleFBO(pr_width, pr_height, filterMode);
     radianceRT = createTripleFBO(pr_width, pr_height, filterMode);
-
 
 
     positionBufferMaterial = new THREE.ShaderMaterial({
@@ -313,10 +296,6 @@ function init() {
         side: THREE.DoubleSide,
     });
 
-
-    createScene(scene);
-
-
     window.addEventListener("keydown", (e) => {
         if(e.key == "k") kpress = true;
         if(e.key == "l") lpress = true;
@@ -341,113 +320,29 @@ function init() {
         if(e.key == "b") bpress = false;
     });
 
-
-
     displayQuadMesh = new THREE.Mesh(new THREE.PlaneBufferGeometry(2,2), displayMaterial);
     displayScene.add(displayQuadMesh);
 
+    createScene(scene);
 
     initGUI();
     animate(0);
 }
 
-function createDoubleFBO(w, h, filtering) {
-    let rt1 = new THREE.WebGLRenderTarget(w, h, {
-        type:          THREE.FloatType,
-        minFilter:     filtering || THREE.LinearFilter,
-        magFilter:     filtering || THREE.LinearFilter,
-        wrapS:         THREE.ClampToEdgeWrapping,
-        wrapT:         THREE.ClampToEdgeWrapping,
-        format:        THREE.RGBAFormat,
-        stencilBuffer: false,
-        anisotropy:    1,
-    });
-
-    let rt2 = new THREE.WebGLRenderTarget(w, h, {
-        type:          THREE.FloatType,
-        minFilter:     filtering || THREE.LinearFilter,
-        magFilter:     filtering || THREE.LinearFilter,
-        wrapS:         THREE.ClampToEdgeWrapping,
-        wrapT:         THREE.ClampToEdgeWrapping,
-        format:        THREE.RGBAFormat,
-        stencilBuffer: false,
-        anisotropy:    1,
-    });
-
-    return {
-        read:  rt1,
-        write: rt2,
-        swap: function() {
-            let temp   = this.read;
-            this.read  = this.write;
-            this.write = temp;
-        }
-    };
-}
-
-function createTripleFBO(w, h, filtering) {
-    let rt1 = new THREE.WebGLRenderTarget(w, h, {
-        type:          THREE.FloatType,
-        minFilter:     filtering || THREE.LinearFilter,
-        magFilter:     filtering || THREE.LinearFilter,
-        wrapS:         THREE.ClampToEdgeWrapping,
-        wrapT:         THREE.ClampToEdgeWrapping,
-        format:        THREE.RGBAFormat,
-        stencilBuffer: false,
-        anisotropy:    1,
-    });
-
-    let rt2 = new THREE.WebGLRenderTarget(w, h, {
-        type:          THREE.FloatType,
-        minFilter:     filtering || THREE.LinearFilter,
-        magFilter:     filtering || THREE.LinearFilter,
-        wrapS:         THREE.ClampToEdgeWrapping,
-        wrapT:         THREE.ClampToEdgeWrapping,
-        format:        THREE.RGBAFormat,
-        stencilBuffer: false,
-        anisotropy:    1,
-    });
-
-    let rt3 = new THREE.WebGLRenderTarget(w, h, {
-        type:          THREE.FloatType,
-        minFilter:     filtering || THREE.LinearFilter,
-        magFilter:     filtering || THREE.LinearFilter,
-        wrapS:         THREE.ClampToEdgeWrapping,
-        wrapT:         THREE.ClampToEdgeWrapping,
-        format:        THREE.RGBAFormat,
-        stencilBuffer: false,
-        anisotropy:    1,
-    });
-
-    return {
-        rt1: rt1,
-        rt2: rt2,
-        rt3: rt3,
-        swap_rt2_rt3: function() {
-            let temp = this.rt2;
-            this.rt2 = this.rt3;
-            this.rt3 = temp;
-        }
-    };
-}
-
 function animate(now) {
     stats.begin();
 
-
     requestAnimationFrame( animate );
-
     now *= 0.001;
 
-
-    // HAI DOVUTO DISABILITARE SCOPE.UPDATE() DURANTE IL MOUSEMOVE/MOUSEDOWN ETC
-    // DENTRO LO SCRIPT ORBITCONTROLS.js,
-    // ALTRIMENTI controls.lastViewMatrixInverse SAREBBE STATA UGUALE ALLA
-    // CURRENT MATRIX (mentre cliccavi e facevi drag), FACENDO SBALLARE I CALCOLI 
-    // DELL'HISTORYTEST.
-    // NON HAI DISABILITATO SCOPE.UPDATE() NELL'HANDLING DEI TOUCH-EVENT, QUINDI 
-    // QUESTO PROGETTO
-    // NON FUNZIONERA' SUI MOBILES FINCHE' NON RIMUOVI SCOPE.UPDATE() ANCHE DA LI'
+    // I had to disable scope.update() during mousemove/mousedown etc
+    // inside OrbitControls.js,
+    // otherwise controls.lastViewMatrixInverse would have been equal to the
+    // current matrix (while I was clicking/dragging), and that was messing history
+    // test calculations 
+    // I think I haven't disabled scope.update() inside the touch-event handling, so 
+    // it's possible that this project wont work on mobiles until you remove
+    // scope.update() from there aswell
     controls.update();
 
 
@@ -521,9 +416,7 @@ function animate(now) {
         scene.children[i].material = scene.children[i].savedMaterial;
     }
 
-
-
-
+    // ************** history accumulation
     historyRT.swap_rt2_rt3();
     // rt2 now holds the previously accumulated values
     // rt3 updates the old accumulated values with the new buffer on rt1
@@ -537,8 +430,7 @@ function animate(now) {
 
 
 
-
-    // **************** creating buffers
+    // **************** position buffer
     for(let i = 0; i < scene.children.length; i++) {
         scene.children[i].savedMaterial = scene.children[i].material;
 
@@ -561,8 +453,7 @@ function animate(now) {
     for(let i = 0; i < scene.children.length; i++) {
         scene.children[i].material = scene.children[i].savedMaterial;
     }
-
-
+    // **************** position buffer - END
 
 
 
@@ -593,9 +484,7 @@ function animate(now) {
    
 
 
-
-
-
+    // ************** normal buffer creation
     normalBufferMaterial.uniforms.uCameraPos.value = camera.position;
     normalBufferMaterialCulled.uniforms.uCameraPos.value = camera.position;
 
@@ -620,16 +509,15 @@ function animate(now) {
     for(let i = 0; i < scene.children.length; i++) {
         scene.children[i].material = scene.children[i].savedMaterial;
     }
+    // ************** normal buffer creation - END
     
 
 
-
-
+    // ************** rendering samples
     renderer.setRenderTarget(radianceRT.rt1);
     renderer.clear();
     for(let i = 0; i < controller.spp + controller.lowhsspp; i++) {
         renderer.setRenderTarget(radianceRT.rt1);
-        // radianceBufferMaterial.uniforms.uRadMult.value    = 1 / (controller.spp);
         radianceBufferMaterial.uniforms.uTotSamples.value = (controller.spp + controller.lowhsspp);
         radianceBufferMaterial.uniforms.uCurrSample.value = i;
         radianceBufferMaterial.uniforms.uLowHistorySamples.value = controller.lowhsspp;
@@ -651,6 +539,10 @@ function animate(now) {
 
         radianceFrameCount++;
     }
+    // ************** rendering samples - END
+
+
+
     // ************** accumulating radiance 
     radianceRT.swap_rt2_rt3();
 
@@ -665,10 +557,6 @@ function animate(now) {
     radianceAccumMaterial.uniforms.uRadianceLambdaFix.value = controller.radianceLambdaFix_;
     renderer.render(displayScene, camera );
     // ************** accumulating radiance - END
-
-
-    // **************** creating buffers - END
-
 
 
 
@@ -704,9 +592,6 @@ function animate(now) {
 
 
 
-
-
-
     // ***********  feedback loop between atrous & radianceRT
     radianceRT.swap_rt2_rt3();
     renderer.setRenderTarget(radianceRT.rt3);
@@ -722,12 +607,9 @@ function animate(now) {
     
 
 
-
-
-
+    // *********** final render pass
     renderer.setRenderTarget(null);
     displayQuadMesh.material = displayMaterial;
-    // displayQuadMesh.material.uniforms.uTexture.value = radianceRT.rt3.texture;
     displayQuadMesh.material.uniforms.uTexture.value = atrousRT.write.texture;
     displayQuadMesh.material.uniforms.uExposure.value = controller.exposure;
         
@@ -743,287 +625,11 @@ function animate(now) {
 
     renderer.clear();
     renderer.render(displayScene, camera);
-
+    // *********** final render pass - END
 
 	stats.end();
 }
 
-let controller;
-function initGUI() {
-
-    var gui = new dat.GUI();
-
-    var GUIcontroller = function() {
-        this.c_phi = 105;
-        this.n_phi = 0.007;
-        this.p_phi = 0.15;
-        this.h_phi = 1;
-
-        this.c_phiMultPerIt = 1;
-
-        this.stepMultiplier = 1.4;
-        this.iterations = 10;
-
-        this.atrous5x5 = true;
-
-        this.maxFramesHistory = 5;
-        this.filterHistoryModulation = 0.88;
-        this.feedbackLoopFactor = 0.3;
-        this.exposure = -1;
-        this.spp = 3;
-        this.lowhsspp = 0;
-
-        this.ssrQuality = 2;
-        this.ssrSteps   = 15;
-        this.ssrBinarySteps = 5;
-        this.ssrJitter = 0;
-        this.ssrBounces = 3;
-        this.ssrStepMult = 1.375;
-        this.ssrStartingStep = 0.1;
-        this.maxIntersectionDepthDistance = 0.5;
-
-        this.radianceLambdaFix_ = 1;
-        this.radianceLambdaFix = true;
-
-        this.lowest = function() {
-            this.c_phi = 105;
-            this.n_phi = 0.007;
-            this.p_phi = 0.15;
-            this.h_phi = 1;
-    
-            this.ssrQuality = 0;
-            this.maxIntersectionDepthDistance = 0.15;
-          
-            this.c_phiMultPerIt = 1;
-    
-            this.stepMultiplier = 1.4;
-            this.iterations = 10;
-    
-            this.atrous5x5 = true;
-    
-            this.maxFramesHistory = 12;
-            this.filterHistoryModulation = 0.85;
-            this.spp = 1;
-
-            this.radianceLambdaFix_ = 1;
-            this.radianceLambdaFix  = true;
-
-            this.feedbackLoopFactor = 1;
-
-            this.updateGUI();
-        }
-
-        this.low = function() {
-            this.c_phi = 105;
-            this.n_phi = 0.007;
-            this.p_phi = 0.15;
-            this.h_phi = 1;
-    
-            this.ssrQuality = 1;
-            this.maxIntersectionDepthDistance = 0.24;
-          
-            this.c_phiMultPerIt = 1;
-    
-            this.stepMultiplier = 1.4;
-            this.iterations = 10;
-    
-            this.atrous5x5 = true;
-    
-            this.maxFramesHistory = 5;
-            this.filterHistoryModulation = 0.78;
-            this.spp = 2;
-
-            this.radianceLambdaFix_ = 1;
-            this.radianceLambdaFix  = true;
-
-            this.feedbackLoopFactor = 0.32;
-
-            this.updateGUI();
-        }
-
-        this.medium = function() {
-            this.c_phi = 105;
-            this.n_phi = 0.007;
-            this.p_phi = 0.15;
-            this.h_phi = 1;
-
-            this.ssrQuality = 2;
-            this.maxIntersectionDepthDistance = 0.5;
-    
-            this.c_phiMultPerIt = 1;
-    
-            this.stepMultiplier = 1.4;
-            this.iterations = 10;
-    
-            this.atrous5x5 = true;
-    
-            this.maxFramesHistory = 5;
-            this.filterHistoryModulation = 0.85;
-            this.spp = 3;
-
-            this.radianceLambdaFix_ = 1;
-            this.radianceLambdaFix  = true;
-
-            this.feedbackLoopFactor = 0.3;
-
-            this.updateGUI();
-        }
-
-        this.high = function() {
-            this.c_phi = 105;
-            this.n_phi = 0.007;
-            this.p_phi = 0.15;
-            this.h_phi = 1;
-    
-            this.ssrQuality = 3;
-            this.maxIntersectionDepthDistance = 0.25;
-
-            this.c_phiMultPerIt = 1;
-    
-            this.stepMultiplier = 1.4;
-            this.iterations = 8;
-    
-            this.atrous5x5 = true;
-    
-            this.maxFramesHistory = 4;
-            this.filterHistoryModulation = 0.79;
-            this.spp = 6;
-
-            this.radianceLambdaFix_ = 1;
-            this.radianceLambdaFix  = true;
-
-            this.feedbackLoopFactor = 1;
-
-            this.updateGUI();
-        }
-
-        this.iCantEvenTestThisProperly = function() {
-            this.c_phi = 105;
-            this.n_phi = 0.007;
-            this.p_phi = 0.15;
-            this.h_phi = 1;
-    
-            this.ssrQuality = 3;
-            this.maxIntersectionDepthDistance = 0.25;
-
-            this.c_phiMultPerIt = 1;
-    
-            this.stepMultiplier = 1.4;
-            this.iterations = 8;
-    
-            this.atrous5x5 = true;
-    
-            this.maxFramesHistory = 4;
-            this.filterHistoryModulation = 0.85;
-            this.spp = 10;
-
-            this.radianceLambdaFix_ = 1;
-            this.radianceLambdaFix  = true;
-
-            this.feedbackLoopFactor = 0.6;
-
-            this.updateGUI();
-        }
-
-        this.switchLights = function() {
-            switchSceneLights();
-        }
-
-        this.updateGUI = function() {
-            for(let folder in gui.__folders) {
-                if(!gui.__folders.hasOwnProperty(folder)) continue;
-        
-                for(let j = 0; j < gui.__folders[folder].__controllers.length; j++) {
-                    let property = gui.__folders[folder].__controllers[j].property;
-        
-                    if(controller.hasOwnProperty(property)) {
-                        gui.__folders[folder].__controllers[j].setValue(controller[property]);
-                    }
-                }
-            }
-        };
-
-    };    
-
-    controller = new GUIcontroller();
-
-
-    var wff = gui.addFolder('Wavelet Filter');
-    var rmf = gui.addFolder('Ray Marcher');
-    var rpf = gui.addFolder('Reprojection Params');
-    var qpf = gui.addFolder('Quality Presets');
-    var fff = gui.addFolder('For fun');
-
-    wff.add(controller, 'c_phi', 0, 2000).onChange(function(value) {
-        atrousMaterial.uniforms.uC_phi.value = value;
-    });
-    wff.add(controller, 'n_phi', 0.001, 30).onChange(function(value) {
-        atrousMaterial.uniforms.uN_phi.value = value;
-    }); 
-    wff.add(controller, 'p_phi', 0, 30).onChange(function(value) {
-        atrousMaterial.uniforms.uP_phi.value = value;
-    }); 
-    wff.add(controller, 'h_phi', 0, 30).onChange(function(value) {
-        atrousMaterial.uniforms.uH_phi.value = value;
-    }); 
-    wff.add(controller, 'c_phiMultPerIt', 0, 4);
-    wff.add(controller, 'stepMultiplier', 0, 5);
-    wff.add(controller, 'iterations', 0, 20).step(1);
-    wff.add(controller, 'feedbackLoopFactor', 0, 1);
-    wff.add(controller, 'atrous5x5').onChange(function(value) {
-        if(value) {
-            atrousMaterial.defines = {
-                "atrous5x5": true,
-            };
-        } else {
-            atrousMaterial.defines = {
-                "atrous3x3": true,
-            };
-        }
-
-        atrousMaterial.needsUpdate = true;
-    });
-
-    rmf.add(controller, 'exposure', -10, 10);
-    rmf.add(controller, 'spp', 1, 15).step(1);
-    rmf.add(controller, 'lowhsspp', 0, 10).step(1);
-
-    rmf.add(controller, 'ssrQuality', 0, 5).step(1);
-    rmf.add(controller, 'ssrSteps', 1, 50).step(1);
-    rmf.add(controller, 'ssrBinarySteps', 1, 20).step(1);
-    rmf.add(controller, 'ssrBounces', 0, 5).step(1);
-    rmf.add(controller, 'ssrJitter', 0, 1);
-    rmf.add(controller, 'ssrStepMult', 1, 4);
-    rmf.add(controller, 'ssrStartingStep', 0, 1);
-    rmf.add(controller, 'maxIntersectionDepthDistance', 0, 5);
-
-
-    rpf.add(controller, 'maxFramesHistory', 0, 20).step(1);
-    rpf.add(controller, 'filterHistoryModulation', 0, 1);
-    rpf.add(controller, 'radianceLambdaFix').onChange(() => {
-        controller.radianceLambdaFix_ = controller.radianceLambdaFix ? 1 : 0;
-    });
-
-
-    qpf.add(controller, 'lowest');
-    qpf.add(controller, 'low');
-    qpf.add(controller, 'medium');
-    qpf.add(controller, 'high');
-    qpf.add(controller, 'iCantEvenTestThisProperly');
-
-    fff.add(controller, 'switchLights');
-
-
-    // wff.open();
-    // ptf.open();
-    // rpf.open();
-    // ssrf.open();
-    qpf.open();
-    fff.open();
-
-
-    controller.medium();
-}
-
-
 makeSceneShaders();
+
+export { atrousMaterial };

@@ -276,8 +276,9 @@ function switchSceneLights() {
     for(let i = 0; i < window.boxes.length; i++) {
         let emss = new THREE.Vector3(0,0,0);
         let ra = Math.random();
+        let strength = 24;
         if(ra < 0.15) {
-            emss = new THREE.Vector3(Math.random() * 10, Math.random() * 10, Math.random() * 10);
+            emss = new THREE.Vector3(Math.random() * strength, Math.random() * strength, Math.random() * strength);
         }
 
         if(noLights) {
