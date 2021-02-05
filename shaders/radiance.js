@@ -34,6 +34,7 @@ function makeSceneShaders() {
     uniform float uSSRStartingStep;
     uniform float uMaxIntersectionDepthDistance;
 
+    uniform sampler2D uEnvMap;
 
     uniform sampler2D uMaterialBuffer;
     uniform sampler2D uAlbedoBuffer;
@@ -110,6 +111,18 @@ function makeSceneShaders() {
         return dot( C, C );
     }
 
+    vec3 getEnvmapRadiance(vec3 dir) {
+        // skybox coordinates
+        vec2 skyboxUV = vec2(
+            (atan(dir.x, dir.z) + PI) / (PI * 2.0),
+            (asin(dir.y) + PI * 0.5) / (PI)
+        );
+        vec3 col = texture2D(uEnvMap, skyboxUV).xyz;
+        col = pow(col, vec3(2.2)); 
+        return vec3(1.0, 1.0, 1.0);
+        return col;
+    }
+
     void main() {
         vec3 radiance = vec3(0.0);
         vec2 ndcuv = (vUv * 2.0 - 1.0) * vec2(uAspectRatio, 1.0);
@@ -168,7 +181,8 @@ function makeSceneShaders() {
         ro = posBuff - rd * 0.01;
 
         if(posBuff == vec3(0.0)) {
-            gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
+            // out of scene condition met
+            gl_FragColor = vec4(getEnvmapRadiance(rd) * radMult, 1.0);
             return;
         }
 
@@ -274,7 +288,13 @@ function makeSceneShaders() {
 
             for(int i = 0; i < maxSteps; i++) {
 
-                if(i >= steps) break;
+                if(i >= steps) {
+                    // out of scene condition met
+                    radiance += getEnvmapRadiance(rd) * mult;
+                    bounces = 0; // make sure we stop both loops entirely
+                    
+                    break;
+                }
 
                 vec3 initialP = p;
                 // jittered step increase, can probably use a much better solution
@@ -296,10 +316,18 @@ function makeSceneShaders() {
                 // they may be treated as intersections!! (also notice how I'm using "w" instead of "viewDir")
                 // this issue will eventually be entirely resolved by using depthBuffers
                 if(dot(normalize(p - uCameraPos), w) < 0.0) {
+                    // out of scene condition met
+                    radiance += getEnvmapRadiance(rd) * mult;
+                    bounces = 0; // make sure we stop both loops entirely
+
                     break;
                 }
                 // out of screen bounds condition
                 if(pUv.x < 0.0 || pUv.x > 1.0 || pUv.y < 0.0 || pUv.y > 1.0) {
+                    // out of scene condition met
+                    radiance += getEnvmapRadiance(rd) * mult;
+                    bounces = 0; // make sure we stop both loops entirely
+
                     break;
                 }
 

@@ -71,6 +71,7 @@ void main() {
     vec4 nval = texture2D(uNormal,   vUv.st + hstep);
     vec4 pval = texture2D(uPosition, vUv.st + hstep);
     if(pval == vec4(0.0, 0.0, 0.0, 0.0)) {
+        gl_FragColor = cval;
         return;
     }
     vec4 hval = texture2D(uHistoryAccum, vUv.st + hstep);

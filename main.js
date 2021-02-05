@@ -13,6 +13,8 @@ import { createDoubleFBO, createTripleFBO } from "./utils.js";
 import { createScene, updateScene } from "./scene.js";
 import Stats from "./dependencies/stats.js";
 import { controller, initGUI } from "./gui.js";
+import { RGBELoader } from './dependencies/RGBELoader.js';
+
 
 window.addEventListener("load", init);
 
@@ -161,7 +163,8 @@ function init() {
             "uAspectRatio": { value: pr_width / pr_height },
             "uRandom": { value: new THREE.Vector4(0, 0, 0, 0) },
             "uTime": { value: 0 },
-            "uFrame": { value: 0 },
+            "uFrame": { value: 0 },                         // alt: FloatType, HalfFloatType, UnsignedByteType
+            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/old_room_2k.hdr') },
             "uSSRQuality": { value: 0 },
             "uSSRSteps": { value: 0 },
             "uSSRBinarySteps": { value: 0 },
