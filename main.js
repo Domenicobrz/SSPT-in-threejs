@@ -164,7 +164,10 @@ function init() {
             "uRandom": { value: new THREE.Vector4(0, 0, 0, 0) },
             "uTime": { value: 0 },
             "uFrame": { value: 0 },                         // alt: FloatType, HalfFloatType, UnsignedByteType
-            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/old_room_2k.hdr') },
+            // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/old_room_2k.hdr') },
+            // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/green_sanctuary_2k.hdr') },
+            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/small_rural_road_2k.hdr') },
+            
             "uSSRQuality": { value: 0 },
             "uSSRSteps": { value: 0 },
             "uSSRBinarySteps": { value: 0 },

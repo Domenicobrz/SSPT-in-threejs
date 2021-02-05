@@ -118,8 +118,9 @@ function makeSceneShaders() {
             (asin(dir.y) + PI * 0.5) / (PI)
         );
         vec3 col = texture2D(uEnvMap, skyboxUV).xyz;
+        // col *= 0.25;
+
         col = pow(col, vec3(2.2)); 
-        return vec3(1.0, 1.0, 1.0);
         return col;
     }
 
@@ -332,6 +333,10 @@ function makeSceneShaders() {
                 }
 
                 float distanceFromCameraAtPosBuff = length(positionAtPointP - uCameraPos);
+                // apply small offset to avoid self-intersections
+                // distanceFromCameraAtPosBuff *= 1.05;
+                BIAS AS A PERCENTAGE AS I'M DOING ABOVE CREATES ARTIFACTS, USE SOMETHING ELSE!
+
                 if(distanceFromCameraAtP > distanceFromCameraAtPosBuff) {
 
                     // intersection found!
