@@ -166,7 +166,7 @@ function init() {
             "uFrame": { value: 0 },                         // alt: FloatType, HalfFloatType, UnsignedByteType
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/old_room_2k.hdr') },
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/green_sanctuary_2k.hdr') },
-            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/small_rural_road_2k.hdr') },
+            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/black.hdr') },
             
             "uSSRQuality": { value: 0 },
             "uSSRSteps": { value: 0 },
