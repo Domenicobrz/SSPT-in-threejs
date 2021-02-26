@@ -120,6 +120,9 @@ function makeSceneShaders() {
         vec3 col = texture2D(uEnvMap, skyboxUV).xyz;
 
         col = pow(col, vec3(2.2)); 
+
+
+        return vec3(1.0);
         return col;
     }
 
@@ -180,7 +183,7 @@ function makeSceneShaders() {
         // is already far into the scene!
         ro = posBuff - rd * 0.01;
 
-        if(posBuff == vec3(0.0)) {
+        if(length(posBuff) > 9999.0) {
             // out of scene condition met
             gl_FragColor = vec4(getEnvmapRadiance(rd) * radMult, 1.0);
             return;
@@ -292,15 +295,14 @@ function makeSceneShaders() {
                     // out of scene condition met
                     radiance += getEnvmapRadiance(rd) * mult;
                     bounces = 0; // make sure we stop both loops entirely
-                    
                     break;
                 }
 
                 vec3 initialP = p;
                 // jittered step increase, can probably use a much better solution
                 // p += rd * (step * jitt_a + step * jitt_b); //rand(p) * 0.25);
-                float jj_a = rand(p) * jitter + (1.0 - jitter);
-                float jj_b = 1.0 - jj_a;
+                float jj_a = 0.5; // rand(p) * jitter + (1.0 - jitter);
+                float jj_b = 0.5; // 1.0 - jj_a;
                 p += rd * (step * jj_a);
                 step *= stepMult;
                 maxIntersectionDepthDistance *= stepMult;
@@ -309,7 +311,14 @@ function makeSceneShaders() {
                 vec2 pNdc = (projP / projP.w).xy;
                 vec2 pUv  = pNdc * 0.5 + 0.5;
                 vec3 positionAtPointP = texture2D(uPositionBuffer, pUv).xyz;
-                if(positionAtPointP == vec3(0.0)) positionAtPointP = uCameraPos + viewDir * 9999999.0;
+                if(positionAtPointP == vec3(0.0)) {
+                    positionAtPointP = uCameraPos + viewDir * 9999999.0;
+                    
+                    if(i == 0) {
+                        gl_FragColor = vec4(0.0, 0.5, 1.0, 1.0);
+                        return;
+                    }
+                }
                 float distanceFromCameraAtP = length(p - uCameraPos);
 
                 // we need to be careful about rays that go "behind" the camera, if they go far enough
@@ -319,7 +328,6 @@ function makeSceneShaders() {
                     // out of scene condition met
                     radiance += getEnvmapRadiance(rd) * mult;
                     bounces = 0; // make sure we stop both loops entirely
-
                     break;
                 }
                 // out of screen bounds condition
@@ -327,7 +335,6 @@ function makeSceneShaders() {
                     // out of scene condition met
                     radiance += getEnvmapRadiance(rd) * mult;
                     bounces = 0; // make sure we stop both loops entirely
-
                     break;
                 }
 
@@ -338,42 +345,68 @@ function makeSceneShaders() {
 
                 if(distanceFromCameraAtP > distanceFromCameraAtPosBuff) {
 
-                    // intersection found!
+
 
                     // ******** binary search start *********
                     vec3 p1 = initialP;
                     vec3 p2 = p;
                     float lastRecordedPosBuffThatIntersected = distanceFromCameraAtPosBuff;
-                    for(int j = 0; j < maxBinarySteps; j++) {
+                    // for(int j = 0; j < maxBinarySteps; j++) {
                         
-                        if(j >= binarySteps) break;
+                    //     if(j >= binarySteps) break;
                         
-                        vec3 mid = (p1 + p2) * 0.5;
-                        vec3 posAtMid = positionBufferAtP(mid, viewDir);
-                        float distanceFromCameraAtMid     = length(mid - uCameraPos);
-                        float distanceFromCameraAtPosBuff = length(posAtMid - uCameraPos);
+                    //     vec3 mid = (p1 + p2) * 0.5;
+                    //     vec3 posAtMid = positionBufferAtP(mid, viewDir);
+                    //     float distanceFromCameraAtMid     = length(mid - uCameraPos);
+                    //     float distanceFromCameraAtPosBuff = length(posAtMid - uCameraPos);
 
-                        if(distanceFromCameraAtMid > distanceFromCameraAtPosBuff) {
-                            p2 = (p1 + p2) * 0.5;
+                    //     if(distanceFromCameraAtMid > distanceFromCameraAtPosBuff) {
+                    //         p2 = (p1 + p2) * 0.5;
 
-                            // we need to save this value inside this if otherwise if it was outside and above this
-                            // if statement, it would be possible that it's value would be very large (e.g. if p1 intersected the "background"
-                            // since in that case positionBufferAtP() returns viewDir * 99999999.0)
-                            // and if that value is very large, it can create artifacts when evaluating this condition:
-                            // ---> if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance)
-                            // to be honest though, these artifacts only appear for largerish values of maxIntersectionDepthDistance
+                    //         // we need to save this value inside this if otherwise if it was outside and above this
+                    //         // if statement, it would be possible that it's value would be very large (e.g. if p1 intersected the "background"
+                    //         // since in that case positionBufferAtP() returns viewDir * 99999999.0)
+                    //         // and if that value is very large, it can create artifacts when evaluating this condition:
+                    //         // ---> if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance)
+                    //         // to be honest though, these artifacts only appear for largerish values of maxIntersectionDepthDistance
 
-                            lastRecordedPosBuffThatIntersected = distanceFromCameraAtPosBuff;
-                        } else {
-                            p1 = (p1 + p2) * 0.5;
-                        }
-                    }
-                    // ******** binary search end   *********
+                    //         lastRecordedPosBuffThatIntersected = distanceFromCameraAtPosBuff;
+                    //     } else {
+                    //         p1 = (p1 + p2) * 0.5;
+                    //     }
+                    // }
+                    // // ******** binary search end   *********
 
 
                     // use p2 as the intersection point
                     float distanceFromCameraAtP2 = length(p2 - uCameraPos);
                     if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance) {
+                       
+                    
+                    // // how would you solve the self intersection issue?
+                    // // one of the possible solutions would be:
+                    // // use a depth-map instead of a position buffer
+                    // // with a depth map, you can store the depth in the .r component, and on the .gb components
+                    // // you could store the depth at the adjacent pixels so that you could linearly construct the
+                    // // surface accurately here,     
+                        
+
+                    // intersection found!
+                    if(i == 0) {
+                        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+
+                        if(dot(rd, normBuff) < 0.0) {
+                            gl_FragColor = vec4(0.0, 1.0, 1.0, 1.0);
+                            return;
+                        }
+
+                        return;
+                    } else if (i > 2) {
+                        gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+                        return;
+                    }
+                    
+
                         // intersection validated
                         // get normal & emission at p2
                         vec4 projP2 = vProjViewModelMatrix * vec4(p2, 1.0);

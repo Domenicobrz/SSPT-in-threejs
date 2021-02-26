@@ -14,11 +14,13 @@ import { createScene, updateScene } from "./scene.js";
 import Stats from "./dependencies/stats.js";
 import { controller, initGUI } from "./gui.js";
 import { RGBELoader } from './dependencies/RGBELoader.js';
+import { renderPositionCube } from "./cubePositionSetter.js";
 
 
 window.addEventListener("load", init);
 
 let scene; 
+let cubemapPositionSetterScene;
 let displayScene;
 let momentBufferScene;
 
@@ -100,7 +102,7 @@ function init() {
         magFilter: filterMode, minFilter: filterMode, type: THREE.FloatType, stencilBuffer: false,
     });
     positionRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
-        magFilter: filterMode, minFilter: filterMode, type: THREE.FloatType, stencilBuffer: false,
+        magFilter: THREE.LinearFilter, minFilter: THREE.LinearFilter, type: THREE.FloatType, stencilBuffer: false,
     });
     normalRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
         magFilter: filterMode, minFilter: filterMode, type: THREE.FloatType, stencilBuffer: false,
@@ -164,9 +166,9 @@ function init() {
             "uRandom": { value: new THREE.Vector4(0, 0, 0, 0) },
             "uTime": { value: 0 },
             "uFrame": { value: 0 },                         // alt: FloatType, HalfFloatType, UnsignedByteType
-            // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/old_room_2k.hdr') },
+            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/old_room_2k.hdr') },
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/green_sanctuary_2k.hdr') },
-            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/black.hdr') },
+            // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/black.hdr') },
             
             "uSSRQuality": { value: 0 },
             "uSSRSteps": { value: 0 },
@@ -202,12 +204,12 @@ function init() {
         uniforms: {
             "uMaterial": { type: "t", value: materialRT.texture },
             "uRadiance": { type: "t", value: radianceRT.rt3.texture },
-            "uNormal":   { type: "t",   value: normalRT.texture   },
+            "uNormal":   { type: "t", value: normalRT.texture   },
             "uPosition": { type: "t", value: positionRT.texture },
             "uHistoryAccum": { type: "t", value: historyRT.rt3.texture },
             "uFilterHistoryModulation": { value: 0 },
             "uMaxFramesHistory": { value: 0 },
-            "uStep": { value: 1.0 },
+            "uStep":  { value: 1.0 },
             "uScreenSize": { value: new THREE.Vector2(pr_width, pr_height) },
             "uC_phi": { value: 0.0 },
             "uN_phi": { value: 0.0 },
@@ -437,6 +439,11 @@ function animate(now) {
 
 
     // **************** position buffer
+    renderer.setRenderTarget(positionRT);
+    renderer.clear();
+    
+    renderPositionCube(renderer, camera);
+
     for(let i = 0; i < scene.children.length; i++) {
         scene.children[i].savedMaterial = scene.children[i].material;
 
@@ -445,11 +452,8 @@ function animate(now) {
         } else {
             scene.children[i].material = positionBufferMaterial;
         }
-
     }
 
-    renderer.setRenderTarget(positionRT);
-    renderer.clear();
     renderer.render( scene, camera );
 
     renderer.setRenderTarget(hrPositionRT);

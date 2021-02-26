@@ -1,0 +1,3 @@
+1. cubePositionSetter seems like it has to be limited to a factor of * 10000 as its maximum distance
+2. cubePositionSetter needs to make a mesh whose size is in the boundaries of the near/far plane (you can't make it e.g. 1 unit size, since the near plane is 1)
+3. the radiance pass assumes that any position whose length is bigger than 9990 is in the "background" or in general outside of the scene
