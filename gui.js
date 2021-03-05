@@ -35,6 +35,7 @@ function initGUI() {
         this.ssrStepMult = 1.375;
         this.ssrStartingStep = 0.1;
         this.maxIntersectionDepthDistance = 0.5;
+        this.radianceClamp = 9999999;
 
         this.radianceLambdaFix_ = 1;
         this.radianceLambdaFix = true;
@@ -250,6 +251,7 @@ function initGUI() {
     rmf.add(controller, 'ssrStepMult', 1, 4);
     rmf.add(controller, 'ssrStartingStep', 0, 1);
     rmf.add(controller, 'maxIntersectionDepthDistance', 0, 5);
+    rmf.add(controller, 'radianceClamp', 0, 9999999);
 
 
     rpf.add(controller, 'maxFramesHistory', 0, 20).step(1);

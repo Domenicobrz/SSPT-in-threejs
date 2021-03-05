@@ -24,6 +24,7 @@ function makeSceneShaders() {
     uniform float uTime;
     uniform float uFrame;
     uniform vec4  uRandom;
+    uniform float uRadianceClamp;
 
     uniform float uSSRQuality;
     uniform float uSSRSteps;
@@ -119,10 +120,10 @@ function makeSceneShaders() {
         );
         vec3 col = texture2D(uEnvMap, skyboxUV).xyz;
 
+        col = clamp(col, vec3(0.0), vec3(uRadianceClamp));
         col = pow(col, vec3(2.2)); 
 
-
-        return vec3(1.0);
+        // return vec3(1.0);
         return col;
     }
 
@@ -351,31 +352,31 @@ function makeSceneShaders() {
                     vec3 p1 = initialP;
                     vec3 p2 = p;
                     float lastRecordedPosBuffThatIntersected = distanceFromCameraAtPosBuff;
-                    // for(int j = 0; j < maxBinarySteps; j++) {
+                    for(int j = 0; j < maxBinarySteps; j++) {
                         
-                    //     if(j >= binarySteps) break;
+                        if(j >= binarySteps) break;
                         
-                    //     vec3 mid = (p1 + p2) * 0.5;
-                    //     vec3 posAtMid = positionBufferAtP(mid, viewDir);
-                    //     float distanceFromCameraAtMid     = length(mid - uCameraPos);
-                    //     float distanceFromCameraAtPosBuff = length(posAtMid - uCameraPos);
+                        vec3 mid = (p1 + p2) * 0.5;
+                        vec3 posAtMid = positionBufferAtP(mid, viewDir);
+                        float distanceFromCameraAtMid     = length(mid - uCameraPos);
+                        float distanceFromCameraAtPosBuff = length(posAtMid - uCameraPos);
 
-                    //     if(distanceFromCameraAtMid > distanceFromCameraAtPosBuff) {
-                    //         p2 = (p1 + p2) * 0.5;
+                        if(distanceFromCameraAtMid > distanceFromCameraAtPosBuff) {
+                            p2 = (p1 + p2) * 0.5;
 
-                    //         // we need to save this value inside this if otherwise if it was outside and above this
-                    //         // if statement, it would be possible that it's value would be very large (e.g. if p1 intersected the "background"
-                    //         // since in that case positionBufferAtP() returns viewDir * 99999999.0)
-                    //         // and if that value is very large, it can create artifacts when evaluating this condition:
-                    //         // ---> if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance)
-                    //         // to be honest though, these artifacts only appear for largerish values of maxIntersectionDepthDistance
+                            // we need to save this value inside this if otherwise if it was outside and above this
+                            // if statement, it would be possible that it's value would be very large (e.g. if p1 intersected the "background"
+                            // since in that case positionBufferAtP() returns viewDir * 99999999.0)
+                            // and if that value is very large, it can create artifacts when evaluating this condition:
+                            // ---> if(abs(distanceFromCameraAtP2 - lastRecordedPosBuffThatIntersected) < maxIntersectionDepthDistance)
+                            // to be honest though, these artifacts only appear for largerish values of maxIntersectionDepthDistance
 
-                    //         lastRecordedPosBuffThatIntersected = distanceFromCameraAtPosBuff;
-                    //     } else {
-                    //         p1 = (p1 + p2) * 0.5;
-                    //     }
-                    // }
-                    // // ******** binary search end   *********
+                            lastRecordedPosBuffThatIntersected = distanceFromCameraAtPosBuff;
+                        } else {
+                            p1 = (p1 + p2) * 0.5;
+                        }
+                    }
+                    // ******** binary search end   *********
 
 
                     // use p2 as the intersection point
@@ -391,20 +392,20 @@ function makeSceneShaders() {
                     // // surface accurately here,     
                         
 
-                    // intersection found!
-                    if(i == 0) {
-                        gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
+                    // // intersection found!
+                    // if(i == 0) {
+                    //     gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);
 
-                        if(dot(rd, normBuff) < 0.0) {
-                            gl_FragColor = vec4(0.0, 1.0, 1.0, 1.0);
-                            return;
-                        }
+                    //     if(dot(rd, normBuff) < 0.0) {
+                    //         gl_FragColor = vec4(0.0, 1.0, 1.0, 1.0);
+                    //         return;
+                    //     }
 
-                        return;
-                    } else if (i > 2) {
-                        gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
-                        return;
-                    }
+                    //     return;
+                    // } else if (i > 2) {
+                    //     gl_FragColor = vec4(0.0, 1.0, 0.0, 1.0);
+                    //     return;
+                    // }
                     
 
                         // intersection validated
@@ -416,7 +417,7 @@ function makeSceneShaders() {
                         vec3 ialbedo   = texture2D(uAlbedoBuffer, p2Uv).xyz;
                         if(dot(inormal, rd) > 0.0) inormal = -inormal;
 
-                        radiance += iemission.xyz * mult;
+                        radiance += clamp(iemission.xyz, vec3(0.0), vec3(uRadianceClamp)) * mult;
 
                         ro = p1;
                         rd = sampleDiffuseHemisphere(inormal, ro);

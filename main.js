@@ -179,6 +179,8 @@ function init() {
             "uSSRStartingStep": { value: 0 },
             "uMaxIntersectionDepthDistance": { value: 0.5 },
 
+            "uRadianceClamp": { value: 9999999 },
+
             "uHistoryBuffer":  { type: "t", value: historyRT.rt3.texture },
             "uMaterialBuffer": { type: "t", value: materialRT.texture },
             "uAlbedoBuffer":   { type: "t", value: albedoRT.texture },
@@ -544,6 +546,7 @@ function animate(now) {
         radianceBufferMaterial.uniforms.uSSRStepMult.value = controller.ssrStepMult;
         radianceBufferMaterial.uniforms.uSSRStartingStep.value = controller.ssrStartingStep;
         radianceBufferMaterial.uniforms.uMaxIntersectionDepthDistance.value = controller.maxIntersectionDepthDistance;
+        radianceBufferMaterial.uniforms.uRadianceClamp.value = controller.radianceClamp;
         displayQuadMesh.material = radianceBufferMaterial;
         renderer.render(displayScene, camera );
 
