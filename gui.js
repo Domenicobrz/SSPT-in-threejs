@@ -114,10 +114,10 @@ function initGUI() {
     
             this.maxFramesHistory = 5;
             this.filterHistoryModulation = 0.85;
-            this.spp = 3;
+            this.spp = 2;
 
             this.radianceLambdaFix_ = 1;
-            this.radianceLambdaFix  = true;
+            this.radianceLambdaFix  = false;
 
             this.feedbackLoopFactor = 0.3;
 

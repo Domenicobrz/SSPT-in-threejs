@@ -36,7 +36,9 @@ void main() {
     // float lambda = (((maxFrames+1.0) - history) / (maxFrames+1.0));
     // float lambda = (((maxFrames+0.05) - history) / (maxFrames+0.05));
     // float lambda = (((maxFrames+2.2) - history) / (maxFrames+2.2));
-    float lambda = (((maxFrames+0.2) - history) / (maxFrames+0.2));
+    // float lambda = (((maxFrames+0.2) - history) / (maxFrames+0.2));
+    float lambda = (((maxFrames+0.08) - history) / (maxFrames+0.08));
+    // float lambda = (((maxFrames+0.04) - history) / (maxFrames+0.04));
 
     if(uRadianceLambdaFix > 0.5) {
         if(history < 0.5) {
@@ -47,7 +49,9 @@ void main() {
     }
 
     vec3 updatedAccum = newRad * lambda + accumulatedRad * (1.0 - lambda);
+    // vec3 updatedAccum = accumulatedRad + (newRad - accumulatedRad) * lambda;
     gl_FragColor = vec4(updatedAccum, 1.0);
+    // gl_FragColor = vec4(newRad, 1.0);
 }
 `;
 

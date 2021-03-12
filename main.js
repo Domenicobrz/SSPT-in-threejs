@@ -58,7 +58,7 @@ let displayQuadMesh;
 
 let kpress, lpress, opress, ppress, jpress, npress, mpress, ipress, bpress;
 
-let pixelRatio = 0.5;
+let pixelRatio = 0.75;
 let pr_width   = Math.floor(innerWidth  * pixelRatio);
 let pr_height  = Math.floor(innerHeight * pixelRatio);
 
@@ -166,8 +166,9 @@ function init() {
             "uRandom": { value: new THREE.Vector4(0, 0, 0, 0) },
             "uTime": { value: 0 },
             "uFrame": { value: 0 },                         // alt: FloatType, HalfFloatType, UnsignedByteType
-            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/old_room_2k.hdr') },
+            // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/old_room_2k.hdr') },
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/green_sanctuary_2k.hdr') },
+            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/urban_alley_01_2k.hdr') },
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/black.hdr') },
             
             "uSSRQuality": { value: 0 },
@@ -217,6 +218,7 @@ function init() {
             "uN_phi": { value: 0.0 },
             "uP_phi": { value: 0.0 },
             "uH_phi": { value: 0.0 },
+            "uIteration": { value: 0.0 },
         },
         fragmentShader: atrous_fs,
         vertexShader: atrous_vs,
@@ -585,6 +587,7 @@ function animate(now) {
     atrousMaterial.uniforms.uMaxFramesHistory.value = controller.maxFramesHistory;
     atrousMaterial.uniforms.uFilterHistoryModulation.value = controller.filterHistoryModulation;
     atrousMaterial.uniforms.uStep.value  = 1.0;
+    atrousMaterial.uniforms.uIteration.value = 0.0;
     displayQuadMesh.material = atrousMaterial;
     renderer.clear();
     renderer.render(displayScene, camera );
@@ -595,6 +598,7 @@ function animate(now) {
         renderer.setRenderTarget(atrousRT.write);
         atrousMaterial.uniforms.uRadiance.value = atrousRT.read.texture;
         atrousMaterial.uniforms.uStep.value  *= controller.stepMultiplier;
+        atrousMaterial.uniforms.uIteration.value = i + 1;
         atrousMaterial.uniforms.uC_phi.value *= controller.c_phiMultPerIt;
         displayQuadMesh.material = atrousMaterial;
         renderer.clear();

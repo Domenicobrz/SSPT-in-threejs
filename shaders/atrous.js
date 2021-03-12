@@ -22,6 +22,7 @@ uniform float uC_phi;
 uniform float uN_phi;
 uniform float uP_phi;
 uniform float uH_phi;
+uniform float uIteration;
 
 
 void main() {
@@ -97,11 +98,19 @@ void main() {
     // **************** mirror-like materials
 
 
-    // float aggressivity = clamp(1.0 - ((hval.x) / uMaxFramesHistory), 0.1, 1.0) * 4.0; 
-    // // if the history is low, be less aggressive with the restrictions
-    // n_phi *= aggressivity;
+
+
+
+
+    float aggressivity = clamp(1.0 - ((hval.x) / uMaxFramesHistory), 0.1, 1.0) * 4.0; 
+    aggressivity = max(aggressivity, 1.0);
+    // if the history is low, be less aggressive with the restrictions
+    n_phi *= aggressivity;
     // p_phi *= aggressivity;
 
+
+
+    
 
     float cum_w = 0.0;
     for(int i = 0; i < loopSteps; i++) {
@@ -125,11 +134,103 @@ void main() {
         // float htmp = texture2D(uHistoryAccum, uv).x;
         // float h_w = ((htmp + 1.0) / uMaxFramesHistory) * h_phi;
 
+        // float htmp = texture2D(uHistoryAccum, uv).x;
+        // float h_w  = 1.0;
+        // // // i nuovi sono attratti dai vecchi
+        // if(hval.x < 1.0 && htmp >= (uMaxFramesHistory - 1.0)) {
+        //     h_w = ((htmp + 1.0) / uMaxFramesHistory) * h_phi;
+        //     p_w = pow(p_w, 0.3);
+        //     n_w = pow(n_w, 0.3);
+
+        //     // sum = ctmp;
+        //     // cum_w = 1.0;
+        //     // break;
+        // }
+        // if(hval.x < 1.0 && htmp < (uMaxFramesHistory - 1.0) && uMaxFramesHistory > 5.0) {
+        //     continue;
+        // }
+
+        // // i vecchi NON sono attratti dai nuovi
+        // if(hval.x >= 1.0 && htmp < (hval.x - 1.0)) {
+        //     h_w = 0.0000001;
+        // }
+
+
+        
         // float weight = c_w * n_w * p_w * h_w;
         float weight = c_w * n_w * p_w;
         sum += ctmp * weight * kernel[i];
 
         cum_w += weight * kernel[i];
+    }
+
+
+
+
+
+    // if(hval.x < (uMaxFramesHistory - 1.0)){ 
+    if(hval.x < (uMaxFramesHistory - 1.0) && uIteration < 2.5) {
+        
+        float best_w  = 0.0;
+        vec4 best_col = vec4(0.0);
+        for(int i = 0; i < loopSteps; i++) {
+            vec2 uv = vUv.st + hstep + offs[i] * step * stepwidth;
+        
+            vec4 ctmp = texture2D(uRadiance, uv);
+            vec4 t = cval - ctmp;
+            float dist2 = dot(t,t);
+            float c_w = min(exp(-(dist2)/c_phi), 1.0);
+
+            vec4 ntmp = texture2D(uNormal, uv);
+            t = nval - ntmp;
+            dist2 = max(dot(t,t)/(stepwidth*stepwidth),0.0);
+            float n_w = min(exp(-(dist2)/n_phi), 1.0);
+
+            vec4 ptmp = texture2D(uPosition, uv);
+            t = pval - ptmp;
+            dist2 = dot(t,t);
+            float p_w = min(exp(-(dist2)/p_phi), 1.0);
+
+            float htmp = texture2D(uHistoryAccum, uv).x;
+
+            float weight = n_w * p_w;
+
+            if(htmp >= (uMaxFramesHistory - 1.0) && weight > best_w) {
+                best_w = weight;
+                best_col = ctmp;
+            }
+        }
+
+        if(best_w != 0.0) {
+            float t = 0.9;
+            if(uIteration > 0.5) t = 0.65;
+            if(uIteration > 1.5) t = 0.35;
+
+            sum = best_col * t + sum * (1.0 - t);
+            cum_w = 1.0;
+        }
+
+        // if(best_w != 0.0 && uIteration < 5.0) {
+        //     float t = best_w / (cum_w + best_w);
+        //     sum = sum / cum_w * (1.0 - t) + best_col * (t);
+        //     cum_w = 1.0;
+        // }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+    if(length(sum) == 0.0 || cum_w == 0.0) {
+        sum = cval;
+        cum_w = 1.0;
     }
     
     vec4 color = sum / cum_w;
