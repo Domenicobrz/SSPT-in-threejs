@@ -149,6 +149,17 @@ function createScene(scene) {
     cbox2.rotation.y = -Math.PI * 0.5;
     scene.add(cbox2);
 
+    window.cbox4 = new THREE.Mesh(
+        new THREE.PlaneBufferGeometry(100, 100), 
+        new THREE.ShaderMaterial({ uniforms: { "uEmissive": { value: new THREE.Vector3(0,0,0) },
+            "uAlbedo": { value: new THREE.Vector3(1,1,1) }, "uStep": { value: 0 }, "uRoughness": { value: 1 },
+            }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,
+        })
+    );
+    cbox4.position.set(0, -5, 0);
+    cbox4.rotation.x = Math.PI * 0.5;
+    scene.add(cbox4);
+
     // window.cbox3 = new THREE.Mesh(new THREE.PlaneBufferGeometry(10, 10), new THREE.ShaderMaterial({ uniforms: { "uEmissive": { value: new THREE.Vector3(0,0,0) },
     // "uAlbedo": { value: new THREE.Vector3(1,1,1) }, "uStep": { value: 0 }, "uRoughness": { value: 0 },
     // }, fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.BackSide,

@@ -58,7 +58,7 @@ let displayQuadMesh;
 
 let kpress, lpress, opress, ppress, jpress, npress, mpress, ipress, bpress;
 
-let pixelRatio = 0.75;
+let pixelRatio = 0.62;
 let pr_width   = Math.floor(innerWidth  * pixelRatio);
 let pr_height  = Math.floor(innerHeight * pixelRatio);
 
@@ -168,7 +168,9 @@ function init() {
             "uFrame": { value: 0 },                         // alt: FloatType, HalfFloatType, UnsignedByteType
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/old_room_2k.hdr') },
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/green_sanctuary_2k.hdr') },
-            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/urban_alley_01_2k.hdr') },
+            // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/urban_alley_01_2k.hdr') },
+            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/reinforced_concrete_01_2k.hdr') },
+            // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/small_rural_road_2k.hdr') },
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/black.hdr') },
             
             "uSSRQuality": { value: 0 },

@@ -108,9 +108,11 @@ void main() {
     n_phi *= aggressivity;
     // p_phi *= aggressivity;
 
+    // if(pval.y < -4.95) {
+    //     stepwidth *= 2.5;
+    //     p_phi *= length(pval) / 0.375;
+    // }
 
-
-    
 
     float cum_w = 0.0;
     for(int i = 0; i < loopSteps; i++) {
@@ -129,7 +131,8 @@ void main() {
         vec4 ptmp = texture2D(uPosition, uv);
         t = pval - ptmp;
         dist2 = dot(t,t);
-        float p_w = min(exp(-(dist2)/p_phi), 1.0);
+        float p_w;
+        p_w = min(exp(-(dist2)/p_phi), 1.0);
 
         // float htmp = texture2D(uHistoryAccum, uv).x;
         // float h_w = ((htmp + 1.0) / uMaxFramesHistory) * h_phi;

@@ -152,30 +152,32 @@ function initGUI() {
             this.updateGUI();
         }
 
-        this.iCantEvenTestThisProperly = function() {
-            this.c_phi = 105;
+        this.experimental = function() {
+            this.c_phi = 10500;
             this.n_phi = 0.007;
             this.p_phi = 0.15;
             this.h_phi = 1;
-    
-            this.ssrQuality = 3;
-            this.maxIntersectionDepthDistance = 0.25;
 
-            this.c_phiMultPerIt = 1;
+            this.ssrQuality = 2;
+            this.maxIntersectionDepthDistance = 0.5;
     
-            this.stepMultiplier = 1.4;
-            this.iterations = 8;
+            this.c_phiMultPerIt = 5;
+    
+            this.stepMultiplier = 1.285;
+            this.iterations = 10;
     
             this.atrous5x5 = true;
     
             this.maxFramesHistory = 4;
-            this.filterHistoryModulation = 0.85;
-            this.spp = 10;
+            this.filterHistoryModulation = 0.65;
+            this.spp = 3;
+
+            this.radianceClamp = 20;
 
             this.radianceLambdaFix_ = 1;
-            this.radianceLambdaFix  = true;
+            this.radianceLambdaFix  = false;
 
-            this.feedbackLoopFactor = 0.6;
+            this.feedbackLoopFactor = 0.375;
 
             this.updateGUI();
         }
@@ -264,7 +266,7 @@ function initGUI() {
     qpf.add(controller, 'low');
     qpf.add(controller, 'medium');
     qpf.add(controller, 'high');
-    qpf.add(controller, 'iCantEvenTestThisProperly');
+    qpf.add(controller, 'experimental');
 
     fff.add(controller, 'switchLights');
 
@@ -276,7 +278,7 @@ function initGUI() {
     fff.open();
 
 
-    controller.medium();
+    controller.experimental();
 }
 
 export { controller, initGUI };
