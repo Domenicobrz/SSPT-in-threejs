@@ -58,7 +58,7 @@ let displayQuadMesh;
 
 let kpress, lpress, opress, ppress, jpress, npress, mpress, ipress, bpress;
 
-let pixelRatio = 0.62;
+let pixelRatio = 0.3;
 let pr_width   = Math.floor(innerWidth  * pixelRatio);
 let pr_height  = Math.floor(innerHeight * pixelRatio);
 
@@ -68,7 +68,7 @@ document.body.appendChild( stats.dom );
 
 
 function init() {
-    renderer = new THREE.WebGLRenderer({ antialias: false });
+    renderer = new THREE.WebGL1Renderer({ antialias: false });
     renderer.setSize( window.innerWidth, window.innerHeight );
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 0.8;
@@ -88,8 +88,8 @@ function init() {
     controls.panSpeed = 1.0;
     controls.screenSpacePanning = true;
 
-    camera.position.set( 0, 1, 18 );
-    controls.target.set( 0, 0, 0 );
+    camera.position.set( 0, 25 * 1.75, 48 * 1.75 );
+    controls.target.set( 0, 5, 0 );
     controls.update();
 
 
@@ -169,8 +169,9 @@ function init() {
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/old_room_2k.hdr') },
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/green_sanctuary_2k.hdr') },
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/urban_alley_01_2k.hdr') },
-            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/reinforced_concrete_01_2k.hdr') },
-            // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/small_rural_road_2k.hdr') },
+            // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/urban_alley_01_1k_b3.hdr') },
+            // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/reinforced_concrete_01_2k.hdr') },
+            "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/small_rural_road_2k.hdr') },
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/black.hdr') },
             
             "uSSRQuality": { value: 0 },
@@ -343,11 +344,14 @@ function init() {
     animate(0);
 }
 
+let then = 0;
 function animate(now) {
     stats.begin();
 
     requestAnimationFrame( animate );
     now *= 0.001;
+    let deltatime = now - then;
+    then = now;
 
     // I had to disable scope.update() during mousemove/mousedown etc
     // inside OrbitControls.js,
@@ -360,7 +364,7 @@ function animate(now) {
     controls.update();
 
 
-    updateScene(now, scene);
+    updateScene(now, scene, deltatime);
 
 
     // we need to create moment buffers BEFORE we update normal/position RTs
@@ -381,6 +385,10 @@ function animate(now) {
             momentBufferMaterial.side = THREE.DoubleSide;   
         }
         momentBufferMaterial.needsUpdate = true;
+
+        // if(!scene.children[i].oldWorldMatrix) {
+        //     scene.childre[i].oldWorldMatrix = scene.children[i].matrixWorld.clone();
+        // }
 
         let viewModelMatrix = new THREE.Matrix4();
         viewModelMatrix.multiplyMatrices(oldCameraMatrix, scene.children[i].oldWorldMatrix);
@@ -651,4 +659,4 @@ function animate(now) {
 
 makeSceneShaders();
 
-export { atrousMaterial };
+export { atrousMaterial, scene, camera };

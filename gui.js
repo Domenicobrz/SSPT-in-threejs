@@ -153,7 +153,7 @@ function initGUI() {
         }
 
         this.experimental = function() {
-            this.c_phi = 10500;
+            this.c_phi = 9;
             this.n_phi = 0.007;
             this.p_phi = 0.15;
             this.h_phi = 1;
@@ -161,23 +161,23 @@ function initGUI() {
             this.ssrQuality = 2;
             this.maxIntersectionDepthDistance = 0.5;
     
-            this.c_phiMultPerIt = 5;
+            this.c_phiMultPerIt = 2;
     
-            this.stepMultiplier = 1.285;
-            this.iterations = 10;
+            this.stepMultiplier = 0.9;
+            this.iterations = 20;
     
             this.atrous5x5 = true;
     
-            this.maxFramesHistory = 4;
-            this.filterHistoryModulation = 0.65;
-            this.spp = 3;
+            this.maxFramesHistory = 2;
+            this.filterHistoryModulation = 0.73;
+            this.spp = 20;
 
             this.radianceClamp = 20;
 
             this.radianceLambdaFix_ = 1;
             this.radianceLambdaFix  = false;
 
-            this.feedbackLoopFactor = 0.375;
+            this.feedbackLoopFactor = 1;
 
             this.updateGUI();
         }
@@ -242,7 +242,7 @@ function initGUI() {
     });
 
     rmf.add(controller, 'exposure', -10, 10);
-    rmf.add(controller, 'spp', 1, 15).step(1);
+    rmf.add(controller, 'spp', 1, 25).step(1);
     rmf.add(controller, 'lowhsspp', 0, 10).step(1);
 
     rmf.add(controller, 'ssrQuality', 0, 5).step(1);
@@ -270,12 +270,13 @@ function initGUI() {
 
     fff.add(controller, 'switchLights');
 
-    // wff.open();
+    wff.open();
+    rmf.open();
     // ptf.open();
-    // rpf.open();
+    rpf.open();
     // ssrf.open();
     qpf.open();
-    fff.open();
+    // fff.open();
 
 
     controller.experimental();

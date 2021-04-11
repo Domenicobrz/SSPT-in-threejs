@@ -171,54 +171,54 @@ void main() {
 
 
 
-    // if(hval.x < (uMaxFramesHistory - 1.0)){ 
-    if(hval.x < (uMaxFramesHistory - 1.0) && uIteration < 2.5) {
+    // // if(hval.x < (uMaxFramesHistory - 1.0)){ 
+    // if(hval.x < (uMaxFramesHistory - 1.0) && uIteration < 2.5) {
         
-        float best_w  = 0.0;
-        vec4 best_col = vec4(0.0);
-        for(int i = 0; i < loopSteps; i++) {
-            vec2 uv = vUv.st + hstep + offs[i] * step * stepwidth;
+    //     float best_w  = 0.0;
+    //     vec4 best_col = vec4(0.0);
+    //     for(int i = 0; i < loopSteps; i++) {
+    //         vec2 uv = vUv.st + hstep + offs[i] * step * stepwidth;
         
-            vec4 ctmp = texture2D(uRadiance, uv);
-            vec4 t = cval - ctmp;
-            float dist2 = dot(t,t);
-            float c_w = min(exp(-(dist2)/c_phi), 1.0);
+    //         vec4 ctmp = texture2D(uRadiance, uv);
+    //         vec4 t = cval - ctmp;
+    //         float dist2 = dot(t,t);
+    //         float c_w = min(exp(-(dist2)/c_phi), 1.0);
 
-            vec4 ntmp = texture2D(uNormal, uv);
-            t = nval - ntmp;
-            dist2 = max(dot(t,t)/(stepwidth*stepwidth),0.0);
-            float n_w = min(exp(-(dist2)/n_phi), 1.0);
+    //         vec4 ntmp = texture2D(uNormal, uv);
+    //         t = nval - ntmp;
+    //         dist2 = max(dot(t,t)/(stepwidth*stepwidth),0.0);
+    //         float n_w = min(exp(-(dist2)/n_phi), 1.0);
 
-            vec4 ptmp = texture2D(uPosition, uv);
-            t = pval - ptmp;
-            dist2 = dot(t,t);
-            float p_w = min(exp(-(dist2)/p_phi), 1.0);
+    //         vec4 ptmp = texture2D(uPosition, uv);
+    //         t = pval - ptmp;
+    //         dist2 = dot(t,t);
+    //         float p_w = min(exp(-(dist2)/p_phi), 1.0);
 
-            float htmp = texture2D(uHistoryAccum, uv).x;
+    //         float htmp = texture2D(uHistoryAccum, uv).x;
 
-            float weight = n_w * p_w;
+    //         float weight = n_w * p_w;
 
-            if(htmp >= (uMaxFramesHistory - 1.0) && weight > best_w) {
-                best_w = weight;
-                best_col = ctmp;
-            }
-        }
+    //         if(htmp >= (uMaxFramesHistory - 1.0) && weight > best_w) {
+    //             best_w = weight;
+    //             best_col = ctmp;
+    //         }
+    //     }
 
-        if(best_w != 0.0) {
-            float t = 0.9;
-            if(uIteration > 0.5) t = 0.65;
-            if(uIteration > 1.5) t = 0.35;
+    //     if(best_w != 0.0) {
+    //         float t = 0.9;
+    //         if(uIteration > 0.5) t = 0.65;
+    //         if(uIteration > 1.5) t = 0.35;
 
-            sum = best_col * t + sum * (1.0 - t);
-            cum_w = 1.0;
-        }
+    //         sum = best_col * t + sum * (1.0 - t);
+    //         cum_w = 1.0;
+    //     }
 
-        // if(best_w != 0.0 && uIteration < 5.0) {
-        //     float t = best_w / (cum_w + best_w);
-        //     sum = sum / cum_w * (1.0 - t) + best_col * (t);
-        //     cum_w = 1.0;
-        // }
-    }
+    //     // if(best_w != 0.0 && uIteration < 5.0) {
+    //     //     float t = best_w / (cum_w + best_w);
+    //     //     sum = sum / cum_w * (1.0 - t) + best_col * (t);
+    //     //     cum_w = 1.0;
+    //     // }
+    // }
 
 
 
