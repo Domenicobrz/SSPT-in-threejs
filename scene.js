@@ -346,7 +346,7 @@ function updateScene(now, scene, deltatime) {
     for(let i = 0; i < scene.children.length; i++) {
         let object = scene.children[i];
         let y_position = object.position.y;
-        let bs_radius = object.geometry.boundingSphere?.radius || 999;
+        let bs_radius = 999; //object.geometry.boundingSphere?.radius || 999;
         let expired_ball = object.isBall && (new Date() - object.ballTimeStamp > 2000);
 
         if(expired_ball) {
@@ -507,7 +507,7 @@ const gravityConstant = 7.8;
 const pos = new THREE.Vector3();
 const quat = new THREE.Quaternion();
 const margin = 0.05;
-const convexBreaker = new ConvexObjectBreaker();
+const convexBreaker = new ConvexObjectBreaker(200);
 const mouseCoords = new THREE.Vector2();
 const raycaster = new THREE.Raycaster();
 const ballMaterial = testDarkMaterial;
@@ -722,7 +722,7 @@ function initInput() {
     
         // Creates a ball and throws it
         const ballMass = 55;
-        const ballRadius = 0.4;
+        const ballRadius = 0.6;
     
         for(let i = 0; i < 3; i++) {
             let dir = raycaster.ray.direction.clone();
@@ -738,12 +738,14 @@ function initInput() {
             ballShape.setMargin( margin );
             pos.copy( dir );
             pos.add( raycaster.ray.origin );
+            pos.add( dir.clone().multiplyScalar(5) );
             quat.set( 0, 0, 0, 1 );
             const ballBody = createRigidBody( ball, ballShape, ballMass, pos, quat );
         
             pos.copy( dir );
             pos.multiplyScalar( 38 );
-            ballBody.setLinearVelocity( new Ammo.btVector3( pos.x * 3, pos.y * 3, pos.z * 3 ) );
+            let velocityMult = 5;
+            ballBody.setLinearVelocity( new Ammo.btVector3( pos.x * velocityMult, pos.y * velocityMult, pos.z * velocityMult ) );
         }
     });
 }
@@ -844,8 +846,8 @@ function updatePhysics( deltaTime ) {
     
         if ( breakable1 && ! collided1 && maxImpulse > fractureImpulse ) {
         
-            // const debris = convexBreaker.subdivideByImpact( threeObject1, impactPoint, impactNormal, 1, 2, 1.5 );
-            const debris = convexBreaker.subdivideByImpact( threeObject1, impactPoint, impactNormal, 0.5, 1, 0.75 );
+            const debris = convexBreaker.subdivideByImpact( threeObject1, impactPoint, impactNormal, 1, 2, 1.5 );
+            // const debris = convexBreaker.subdivideByImpact( threeObject1, impactPoint, impactNormal, 0.5, 1, 0.75 );
             // const debris = convexBreaker.subdivideByImpact( threeObject1, impactPoint, impactNormal, 0.25, 0.5, 0.375 );
         
             const numObjects = debris.length;
