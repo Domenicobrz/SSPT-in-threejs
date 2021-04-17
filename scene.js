@@ -345,7 +345,16 @@ function updateScene(now, scene, deltatime) {
     let toRemove = [];
     for(let i = 0; i < scene.children.length; i++) {
         let object = scene.children[i];
-        if(object.position.y < -40 || (object.userData.physicsBody.mass > 0.0001 && object.userData.physicsBody.mass < 10)) {
+        let y_position = object.position.y;
+        let bs_radius = object.geometry.boundingSphere?.radius || 999;
+        let expired_ball = object.isBall && (new Date() - object.ballTimeStamp > 2000);
+
+        if(expired_ball) {
+            console.log("removing ball");
+        }
+
+        if(y_position < -40 || (bs_radius < 3.6 && !object.isBall) || expired_ball) {
+        // if(object.position.y < -40 || (object.userData.physicsBody.mass > 0.0001 && object.userData.physicsBody.mass < 10)) {
             toRemove.push(object);
         }
     }
@@ -353,6 +362,28 @@ function updateScene(now, scene, deltatime) {
         console.log("removing debris");
         removeDebris(toRemove[i]);
     }
+
+    // let maxObjects = 400;
+    // if(scene.children.length > maxObjects) {
+    //     let ordered = [...scene.children];
+
+    //     ordered.sort((a, b) => {
+    //         let a_w = (a.geometry.boundingSphere?.radius || 999);
+    //         let b_w = (b.geometry.boundingSphere?.radius || 999);
+
+    //         if(a.isBall) a_w = 999;
+    //         if(b.isBall) b_w = 999;
+
+    //         return a_w - b_w;
+    //     });
+    
+    //     let howManyToRemove = scene.children.length - maxObjects;
+    //     for(let i = 0; i < howManyToRemove; i++) {
+    //         removeDebris(ordered[i]);
+    //     }
+    // }
+
+
 
 
     if(physicsWorld) {
@@ -701,6 +732,8 @@ function initInput() {
             }
 
             const ball = new THREE.Mesh( new THREE.SphereGeometry( ballRadius, 14, 10 ), ballMaterial );
+            ball.isBall = true;
+            ball.ballTimeStamp = new Date();
             const ballShape = new Ammo.btSphereShape( ballRadius );
             ballShape.setMargin( margin );
             pos.copy( dir );
@@ -813,6 +846,7 @@ function updatePhysics( deltaTime ) {
         
             // const debris = convexBreaker.subdivideByImpact( threeObject1, impactPoint, impactNormal, 1, 2, 1.5 );
             const debris = convexBreaker.subdivideByImpact( threeObject1, impactPoint, impactNormal, 0.5, 1, 0.75 );
+            // const debris = convexBreaker.subdivideByImpact( threeObject1, impactPoint, impactNormal, 0.25, 0.5, 0.375 );
         
             const numObjects = debris.length;
             for ( let j = 0; j < numObjects; j ++ ) {

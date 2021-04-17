@@ -159,7 +159,7 @@ function initGUI() {
             this.h_phi = 1;
 
             this.ssrQuality = 2;
-            this.maxIntersectionDepthDistance = 0.5;
+            this.maxIntersectionDepthDistance = 0.75;
     
             this.c_phiMultPerIt = 2;
     

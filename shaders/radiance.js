@@ -191,8 +191,10 @@ function makeSceneShaders() {
         }
 
         if(length(emissionBuff) > 0.0) {
-            gl_FragColor = vec4(emissionBuff, 1.0) * radMult;
-            return;
+            // gl_FragColor = vec4(emissionBuff, 1.0) * radMult;
+            radiance += vec3(emissionBuff);
+            albedoBuff = vec3(1.0);
+            // return;
         }
 
 
@@ -281,6 +283,7 @@ function makeSceneShaders() {
             rd = sampleGlossyHemisphere(normBuff, ro, rd);
         }
         mult *= albedoBuff * max(dot(rd, normBuff), 0.0);
+        // radiance *= mult;
 
         for(int b = 0; b < maxBounces; b++) {
             vec3 p = ro;
