@@ -172,6 +172,7 @@ function init() {
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/urban_alley_01_1k_b3.hdr') },
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/reinforced_concrete_01_2k.hdr') },
             "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/small_rural_road_2k.hdr') },
+            "uEnvMapBlur": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/rural_blur_1.hdr') },
             // "uEnvMap": { type: "t", value: new RGBELoader().setDataType( THREE.FloatType ).load( 'assets/textures/black.hdr') },
             
             "uSSRQuality": { value: 0 },

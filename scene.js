@@ -727,8 +727,10 @@ function initInput() {
         for(let i = 0; i < 3; i++) {
             let dir = raycaster.ray.direction.clone();
             if(i != 0) {
-                dir.x *= 1 + Math.random() * 0.6 - 0.3;
-                dir.y *= 1 + Math.random() * 0.6 - 0.3;
+                // dir.x *= 1 + Math.random() * 0.6 - 0.3;
+                // dir.y *= 1 + Math.random() * 0.6 - 0.3;
+                dir.x += Math.random() * 0.2 - 0.1;
+                dir.y += Math.random() * 0.2 - 0.1;
             }
 
             const ball = new THREE.Mesh( new THREE.SphereGeometry( ballRadius, 14, 10 ), ballMaterial );

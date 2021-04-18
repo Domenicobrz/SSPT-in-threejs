@@ -36,6 +36,7 @@ function makeSceneShaders() {
     uniform float uMaxIntersectionDepthDistance;
 
     uniform sampler2D uEnvMap;
+    uniform sampler2D uEnvMapBlur;
 
     uniform sampler2D uMaterialBuffer;
     uniform sampler2D uAlbedoBuffer;
@@ -127,6 +128,20 @@ function makeSceneShaders() {
         return col;
     }
 
+    vec3 getBlurEnvmapRadiance(vec3 dir) {
+        // skybox coordinates
+        vec2 skyboxUV = vec2(
+            (atan(dir.x, dir.z) + PI) / (PI * 2.0),
+            (asin(dir.y) + PI * 0.5 + 0.3) / (PI)
+        );
+        vec3 col = texture2D(uEnvMapBlur, skyboxUV).xyz * 1.5;
+
+        col = clamp(col, vec3(0.0), vec3(uRadianceClamp));
+        col = pow(col, vec3(2.2)); 
+
+        return col;
+    }
+
     void main() {
         vec3 radiance = vec3(0.0);
         vec2 ndcuv = (vUv * 2.0 - 1.0) * vec2(uAspectRatio, 1.0);
@@ -186,7 +201,7 @@ function makeSceneShaders() {
 
         if(length(posBuff) > 9999.0) {
             // out of scene condition met
-            gl_FragColor = vec4(getEnvmapRadiance(rd) * radMult, 1.0);
+            gl_FragColor = vec4(getBlurEnvmapRadiance(rd) * radMult, 1.0);
             return;
         }
 
