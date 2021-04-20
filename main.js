@@ -3,6 +3,7 @@ import { OrbitControls } from "./dependencies/orbitControls.js";
 import { position_fs, position_vs } from "./shaders/position.js";
 import { normal_fs, normal_vs } from "./shaders/normals.js";
 import { display_fs, display_vs } from "./shaders/display.js";
+import { postprocess_fs, postprocess_vs } from "./shaders/postprocess.js";
 import { makeSceneShaders } from "./shaders/radiance.js";
 import { atrous_fs, atrous_vs } from "./shaders/atrous.js";
 import { momentMove_fs, momentMove_vs } from "./shaders/momentMove.js";
@@ -40,6 +41,7 @@ let historyRT;
 let materialRT;
 let hrPositionRT;
 let hrNormalRT;
+let displayRT;
 
 let positionBufferMaterial;
 let positionBufferMaterialCulled;
@@ -53,6 +55,9 @@ let historyAccumMaterial;
 let radianceAccumMaterial;
 let atrousMaterial;
 let feedbackLoopMaterial;
+let postProcessMaterial;
+
+let pointersEffectsData = [];
 
 let displayQuadMesh;
 
@@ -118,6 +123,9 @@ function init() {
     });
     momentMoveRT = new THREE.WebGLRenderTarget(pr_width, pr_height, {
         magFilter: filterMode, minFilter: filterMode, type: THREE.FloatType, stencilBuffer: false,
+    }); 
+    displayRT = new THREE.WebGLRenderTarget(innerWidth, innerHeight, {
+        magFilter: filterMode, minFilter: filterMode, stencilBuffer: false,
     }); 
     atrousRT = createDoubleFBO(pr_width, pr_height, filterMode);
     historyRT = createTripleFBO(pr_width, pr_height, filterMode);
@@ -309,6 +317,17 @@ function init() {
         },
         fragmentShader: display_fs,
         vertexShader: display_vs,
+        side: THREE.DoubleSide,
+    });
+
+    postProcessMaterial = new THREE.ShaderMaterial({
+        uniforms: {
+            "uTexture": { type: "t", value: displayRT.texture },
+            "uPointer": { value: new THREE.Vector4(0,0,999,0) },
+            "uAspect":  { value: innerWidth / innerHeight },
+        },
+        fragmentShader: postprocess_fs,
+        vertexShader: postprocess_vs,
         side: THREE.DoubleSide,
     });
 
@@ -636,7 +655,7 @@ function animate(now) {
 
 
     // *********** final render pass
-    renderer.setRenderTarget(null);
+    renderer.setRenderTarget(displayRT);
     displayQuadMesh.material = displayMaterial;
     displayQuadMesh.material.uniforms.uTexture.value = atrousRT.write.texture;
     displayQuadMesh.material.uniforms.uExposure.value = controller.exposure;
@@ -655,9 +674,18 @@ function animate(now) {
     renderer.render(displayScene, camera);
     // *********** final render pass - END
 
+    // *********** postprocess ***********
+    renderer.setRenderTarget(null);
+    displayQuadMesh.material = postProcessMaterial;
+    displayQuadMesh.material.uniforms.uTexture.value = displayRT.texture;
+
+    renderer.clear();
+    renderer.render(displayScene, camera);
+    // *********** postprocess - END ***********
+
 	stats.end();
 }
 
 makeSceneShaders();
 
-export { atrousMaterial, scene, camera };
+export { atrousMaterial, scene, camera, postProcessMaterial };

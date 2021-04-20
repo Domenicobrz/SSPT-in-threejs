@@ -4,7 +4,7 @@ import { litStatueMaterial_fs, litStatueMaterial_vs } from "./shaders/litStatueM
 import { OBJLoader } from "./dependencies/OBJLoader.js";
 import { ConvexObjectBreaker } from './dependencies/ConvexObjectBreaker.js';
 import { ConvexGeometry } from './dependencies/ConvexGeometry.js';
-import { scene, camera } from "./main.js";
+import { scene, camera, postProcessMaterial } from "./main.js";
 
 let sceneType = 0;
 let cornellBGreenMat;
@@ -334,6 +334,11 @@ function createScene(scene) {
 }
 
 function updateScene(now, scene, deltatime) {
+
+    let v = postProcessMaterial.uniforms.uPointer.value.clone(); 
+    postProcessMaterial.uniforms.uPointer.value = new THREE.Vector4(v.x, v.y, v.z + deltatime, 0);
+
+
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
     for(let i = 0; i < scene.children.length; i++) {
@@ -350,7 +355,7 @@ function updateScene(now, scene, deltatime) {
         let expired_ball = object.isBall && (new Date() - object.ballTimeStamp > 2000);
 
         if(expired_ball) {
-            console.log("removing ball");
+            // console.log("removing ball");
         }
 
         if(y_position < -40 || (bs_radius < 3.6 && !object.isBall) || expired_ball) {
@@ -359,7 +364,7 @@ function updateScene(now, scene, deltatime) {
         }
     }
     for(let i = 0; i < toRemove.length; i++) {
-        console.log("removing debris");
+        // console.log("removing debris");
         removeDebris(toRemove[i]);
     }
 
@@ -405,7 +410,7 @@ window.addEventListener("keypress", (e) => {
             }
         }
         for(let i = 0; i < toRemove.length; i++) {
-            console.log("removing debris");
+            // console.log("removing debris");
             removeDebris(toRemove[i]);
         }
     }
@@ -529,34 +534,62 @@ function initPhysics() {
 }
 
 function initObjects() {
+    // pos.set( 0, - 0.5, 0 );
+    // quat.set( 0, 0, 0, 1 );
+    // const ground = createParalellepipedWithPhysics( 40, 1, 40, 0, pos, quat, testDarkMaterial );
+
+    // pos.set( 0, 1.5, -20 );
+    // quat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), 0);
+    // const wall1 = createParalellepipedWithPhysics( 40, 3, 1, 0, pos, quat, testDarkMaterial );
+    
+    // pos.set( -20, 1.5, 0 );
+    // quat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
+    // const wall2 = createParalellepipedWithPhysics( 1, 3, 40, 0, pos, quat, testDarkMaterial );
+    
+    // pos.set( 20, 1.5, 0 );
+    // quat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
+    // const wall3 = createParalellepipedWithPhysics( 1, 3, 40, 0, pos, quat, testDarkMaterial );
+
+
+
     pos.set( 0, - 0.5, 0 );
     quat.set( 0, 0, 0, 1 );
-    const ground = createParalellepipedWithPhysics( 40, 1, 40, 0, pos, quat, testDarkMaterial );
+    const ground = createParalellepipedWithPhysics( 52, 1, 40, 0, pos, quat, testDarkMaterial );
 
     pos.set( 0, 1.5, -20 );
     quat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), 0);
-    const wall1 = createParalellepipedWithPhysics( 40, 3, 1, 0, pos, quat, testDarkMaterial );
+    const wall1 = createParalellepipedWithPhysics( 52, 3, 1, 0, pos, quat, testDarkMaterial );
     
-    pos.set( -20, 1.5, 0 );
+    pos.set( -26, 1.5, 0 );
     quat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
     const wall2 = createParalellepipedWithPhysics( 1, 3, 40, 0, pos, quat, testDarkMaterial );
     
-    pos.set( 20, 1.5, 0 );
+    pos.set( 26, 1.5, 0 );
     quat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
     const wall3 = createParalellepipedWithPhysics( 1, 3, 40, 0, pos, quat, testDarkMaterial );
 
 
-    // for(let s = -2; s <= 2; s++) {
-    //     for(let i = -2; i <= 2; i++) {
-    //         let redness = Math.random() * 0.9;
+
+    
+    // for(let s = -3; s <= 1; s++) {
+    //     for(let i = -3; i <= 3; i++) {
     //         let brightness = Math.random() * 0.9 + 0.1;
+    //         let redness = Math.min(brightness, Math.random() * 0.9);
 
     //         let b = brightness;
     //         let r = redness;
 
+    //         let et = Math.random();
+    //         let er = 0, eb = 0, eg = 0;
+    //         if(et > 0.95) {
+    //             er = 20; eg = 0.4; eb = 0.75;
+    //         } else if (et > 0.9) {
+    //             er = 20; eg = 10; eb = 5;
+    //         }
+
     //         let mat = new THREE.ShaderMaterial({
     //             uniforms: {
-    //                 "uEmissive": { value: new THREE.Vector3(0,0,0) },
+    //                 "uEmissive": { value: new THREE.Vector3(er, eg, eb) },
     //                 "uAlbedo": { value: new THREE.Vector3(b, b - r, b - r) },
     //                 "uRoughness": { value: 1 },
     //                 "uStep": { value: 0 },
@@ -564,9 +597,9 @@ function initObjects() {
     //             fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
     //         });
 
-    //         let rad = 3.8;
-    //         let dist = 7.8;
-    //         let h = 3 + Math.random() * 6;
+    //         let rad = 2.6;
+    //         let dist = 5.8;
+    //         let h = 3 + Math.random() * 6 - s * 0.75;
 
     //         // Tower 1
     //         const towerMass = 1000;
@@ -577,10 +610,9 @@ function initObjects() {
     //     }
     // }
 
-
     
-    for(let s = -3; s <= 3; s++) {
-        for(let i = -3; i <= 3; i++) {
+    for(let s = -3; s <= 1; s++) {
+        for(let i = -4; i <= 4; i++) {
             let brightness = Math.random() * 0.9 + 0.1;
             let redness = Math.min(brightness, Math.random() * 0.9);
 
@@ -616,6 +648,85 @@ function initObjects() {
             quat.set( 0, 0, 0, 1 );
             createObject( towerMass, towerHalfExtents, pos, quat, mat );
         }
+    }
+    
+    for(let s = 2; s <= 3; s++) {
+        for(let i = -3; i <= 3; i++) {
+            let brightness = Math.random() * 0.9 + 0.1;
+            let redness = Math.min(brightness, Math.random() * 0.9);
+
+            if(Math.random() > 0.7) continue;
+
+            let b = brightness;
+            let r = redness;
+
+            let et = Math.random();
+            let er = 0, eb = 0, eg = 0;
+            // if(et > 0.95) {
+            //     er = 20; eg = 0.4; eb = 0.75;
+            // } else if (et > 0.9) {
+            //     er = 20; eg = 10; eb = 5;
+            // }
+
+            let mat = new THREE.ShaderMaterial({
+                uniforms: {
+                    "uEmissive": { value: new THREE.Vector3(er, eg, eb) },
+                    "uAlbedo": { value: new THREE.Vector3(b, b - r, b - r) },
+                    "uRoughness": { value: 1 },
+                    "uStep": { value: 0 },
+                },
+                fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
+            });
+
+            let radx  = 0.75 + Math.random() * 1.5;
+            let radz  = 0.75;
+            let dist = 6.3;
+            let h = 0.35 + radx * 0.25;
+
+            // Tower 1
+            const towerMass = 20;
+            const towerHalfExtents = new THREE.Vector3( radx, h, radz );
+            pos.set( i * dist + Math.random() * 1.5, h / 2, s * dist );
+            quat.set( 0, 0, 0, 1 );
+            createObject( towerMass, towerHalfExtents, pos, quat, mat );
+        }
+    }
+
+
+    // create street lines 
+    for(let s = -4; s <= 4; s++) {
+        let object = new THREE.Mesh( new THREE.PlaneBufferGeometry(0.4, 2), testWhiteMaterial );
+        object.rotation.x = Math.PI * 0.5;
+        object.rotation.z = Math.PI * 0.5;
+        object.position.set(s * 5, 0.2, 14.5);
+        scene.add(object);
+    }
+
+    // street lights 
+    for(let s = -4; s <= 4; s++) {
+        if(Math.random() > 0.5) continue;
+        let x = 1.5 + Math.random() * 1.5;
+        let y = 1 + Math.random() * 1.5;
+
+        let er = 20; 
+        let eg = 10; 
+        let eb = 5;
+
+        let mat = new THREE.ShaderMaterial({
+            uniforms: {
+                "uEmissive": { value: new THREE.Vector3(er, eg, eb) },
+                "uAlbedo": { value: new THREE.Vector3(1,1,1) },
+                "uRoughness": { value: 1 },
+                "uStep": { value: 0 },
+            },
+            fragmentShader: standardMaterial_fs, vertexShader: standardMaterial_vs, side: THREE.DoubleSide,
+        });
+
+        const towerMass = 100;
+        const towerHalfExtents = new THREE.Vector3( x, y, 0.3 );
+        pos.set( s * 5.8, 2, 9.3 );
+        quat.set( 0, 0, 0, 1 );
+        createObject( towerMass, towerHalfExtents, pos, quat, mat );
     }
 }
 
@@ -717,6 +828,8 @@ function initInput() {
             ( event.clientX / window.innerWidth ) * 2 - 1,
             - ( event.clientY / window.innerHeight ) * 2 + 1
         );
+
+        postProcessMaterial.uniforms.uPointer.value = new THREE.Vector4(event.clientX / window.innerWidth, 1 - event.clientY / window.innerHeight, 0, 0);
     
         raycaster.setFromCamera( mouseCoords, camera );
     
@@ -752,10 +865,12 @@ function initInput() {
     });
 }
 
+let count = 0;
 function updatePhysics( deltaTime ) {
 
     // Step world
     physicsWorld.stepSimulation( deltaTime, 10 );
+    count++;
 
     // Update rigid bodies
     for ( let i = 0, il = rigidBodies.length; i < il; i ++ ) {
@@ -825,9 +940,10 @@ function updatePhysics( deltaTime ) {
     
         // Subdivision
         // const fractureImpulse = 200;
-        const fractureImpulse = 300;
+        let fractureImpulse = 200;
+        // if(count > 3) fractureImpulse = 200;
 
-        if ( breakable0 && !collided0 && maxImpulse > fractureImpulse ) {
+        if ( breakable0 && !collided0 && maxImpulse > fractureImpulse && count > 30) {
         
             const debris = convexBreaker.subdivideByImpact( threeObject0, impactPoint, impactNormal, 1, 2, 1.5 );
         
@@ -846,7 +962,7 @@ function updatePhysics( deltaTime ) {
             userData0.collided = true;
         }
     
-        if ( breakable1 && ! collided1 && maxImpulse > fractureImpulse ) {
+        if ( breakable1 && ! collided1 && maxImpulse > fractureImpulse && count > 30 ) {
         
             const debris = convexBreaker.subdivideByImpact( threeObject1, impactPoint, impactNormal, 1, 2, 1.5 );
             // const debris = convexBreaker.subdivideByImpact( threeObject1, impactPoint, impactNormal, 0.5, 1, 0.75 );
