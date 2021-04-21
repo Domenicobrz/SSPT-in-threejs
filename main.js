@@ -57,7 +57,18 @@ let atrousMaterial;
 let feedbackLoopMaterial;
 let postProcessMaterial;
 
-let pointersEffectsData = [];
+let pointersEffectsData = [
+    new THREE.Vector4(0,0,999,0), 
+    new THREE.Vector4(0,0,999,0), 
+    new THREE.Vector4(0,0,999,0), 
+    new THREE.Vector4(0,0,999,0), 
+    new THREE.Vector4(0,0,999,0),
+    new THREE.Vector4(0,0,999,0), 
+    new THREE.Vector4(0,0,999,0), 
+    new THREE.Vector4(0,0,999,0), 
+    new THREE.Vector4(0,0,999,0), 
+    new THREE.Vector4(0,0,999,0), 
+];
 
 let displayQuadMesh;
 
@@ -323,7 +334,7 @@ function init() {
     postProcessMaterial = new THREE.ShaderMaterial({
         uniforms: {
             "uTexture": { type: "t", value: displayRT.texture },
-            "uPointer": { value: new THREE.Vector4(0,0,999,0) },
+            "uPointer": { value: pointersEffectsData },
             "uAspect":  { value: innerWidth / innerHeight },
         },
         fragmentShader: postprocess_fs,
@@ -688,4 +699,4 @@ function animate(now) {
 
 makeSceneShaders();
 
-export { atrousMaterial, scene, camera, postProcessMaterial };
+export { atrousMaterial, scene, camera, postProcessMaterial, pointersEffectsData };

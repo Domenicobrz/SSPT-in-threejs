@@ -4,7 +4,7 @@ import { litStatueMaterial_fs, litStatueMaterial_vs } from "./shaders/litStatueM
 import { OBJLoader } from "./dependencies/OBJLoader.js";
 import { ConvexObjectBreaker } from './dependencies/ConvexObjectBreaker.js';
 import { ConvexGeometry } from './dependencies/ConvexGeometry.js';
-import { scene, camera, postProcessMaterial } from "./main.js";
+import { scene, camera, postProcessMaterial, pointersEffectsData } from "./main.js";
 
 let sceneType = 0;
 let cornellBGreenMat;
@@ -335,8 +335,13 @@ function createScene(scene) {
 
 function updateScene(now, scene, deltatime) {
 
-    let v = postProcessMaterial.uniforms.uPointer.value.clone(); 
-    postProcessMaterial.uniforms.uPointer.value = new THREE.Vector4(v.x, v.y, v.z + deltatime, 0);
+    for(let i = 0; i < pointersEffectsData.length; i++) {
+        pointersEffectsData[i].z = pointersEffectsData[i].z + deltatime;
+    }
+    postProcessMaterial.uniforms.uPointer.value = pointersEffectsData;
+    postProcessMaterial.uniforms.uPointer.needsUpdate = true; 
+    postProcessMaterial.uniforms.needsUpdate = true; 
+
 
 
     // OBJECTS ARE IN CHARGE OF KEEPING A COPY OF THEIR OLDER WORLD MATRICES
@@ -829,8 +834,12 @@ function initInput() {
             - ( event.clientY / window.innerHeight ) * 2 + 1
         );
 
-        postProcessMaterial.uniforms.uPointer.value = new THREE.Vector4(event.clientX / window.innerWidth, 1 - event.clientY / window.innerHeight, 0, 0);
-    
+        pointersEffectsData.splice(0, 1);
+        pointersEffectsData.push(new THREE.Vector4(event.clientX / window.innerWidth, 1 - event.clientY / window.innerHeight, 0, 0))
+        postProcessMaterial.uniforms.uPointer.value = pointersEffectsData;
+        postProcessMaterial.uniforms.uPointer.needsUpdate = true;
+
+
         raycaster.setFromCamera( mouseCoords, camera );
     
         // Creates a ball and throws it
