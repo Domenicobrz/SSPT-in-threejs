@@ -100,13 +100,15 @@ function init() {
     controls = new OrbitControls( camera, renderer.domElement );
     controls.enableDamping = true;
     controls.dampingFactor = 0.1875;
-    controls.enablePan = true;
+    controls.enablePan = false;
     controls.panSpeed = 1.0;
     controls.screenSpacePanning = true;
 
     camera.position.set( 0, 25 * 1.75, 48 * 1.75 );
     controls.target.set( 0, 5, 0 );
     controls.update();
+    controls.maxDistance = 93;
+    controls.minDistance = 93;
 
 
     let filterMode = THREE.NearestFilter;

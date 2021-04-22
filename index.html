@@ -18,6 +18,38 @@
         .folder:nth-of-type(4) .dg .property-name {
             width: 65% !important;
         }
+
+        p {
+            position: absolute;
+            text-align: center;
+            bottom: 30px;
+            font-size: 12px;
+            font-family: monospace;
+            color: #ddd;
+            width: 100%;
+        }
+
+        p > span {
+            font-weight: bold;
+            margin: 0 -2.5px;
+            display: inline-block;
+        }
+
+        p > span:nth-of-type(1) {
+            transform: rotate(-10deg) translate(-0px, -1px);
+        }
+        p > span:nth-of-type(2) {
+            transform: rotate(3deg) translate(0px, 1px);
+        }
+        p > span:nth-of-type(3) {
+            transform: rotate(0deg) translate(0px, 1px);
+        }
+        p > span:nth-of-type(4) {
+            transform: rotate(-3deg) translate(0px, 3px);
+        }
+        p > span:nth-of-type(5) {
+            transform: rotate(3deg) translate(0px, 1px);
+        }
     </style>
 
 
@@ -25,5 +57,13 @@
 <body>
     <script src="ammo.wasm.js"></script>
     <script src="main.js" type="module"></script>
+
+    <p>left click for boom, right click for 
+        <span>B</span>
+        <span>O</span>
+        <span>O</span>
+        <span>O</span>
+        <span>M</span>
+    </p>
 </body>
 </html>

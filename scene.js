@@ -563,15 +563,15 @@ function initObjects() {
 
     pos.set( 0, 1.5, -20 );
     quat.setFromAxisAngle(new THREE.Vector3(0, 0, 1), 0);
-    const wall1 = createParalellepipedWithPhysics( 52, 3, 1, 0, pos, quat, testDarkMaterial );
+    const wall1 = createParalellepipedWithPhysics( 52, 5, 1, 0, pos, quat, testDarkMaterial );
     
     pos.set( -26, 1.5, 0 );
     quat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
-    const wall2 = createParalellepipedWithPhysics( 1, 3, 40, 0, pos, quat, testDarkMaterial );
+    const wall2 = createParalellepipedWithPhysics( 1, 5, 40, 0, pos, quat, testDarkMaterial );
     
     pos.set( 26, 1.5, 0 );
     quat.setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0);
-    const wall3 = createParalellepipedWithPhysics( 1, 3, 40, 0, pos, quat, testDarkMaterial );
+    const wall3 = createParalellepipedWithPhysics( 1, 5, 40, 0, pos, quat, testDarkMaterial );
 
 
 
@@ -828,14 +828,20 @@ function createRigidBody( object, physicsShape, mass, pos, quat, vel, angVel ) {
 function initInput() {
 
     window.addEventListener( 'pointerdown', function ( event ) {
-    
+        console.log(event);
+
         mouseCoords.set(
             ( event.clientX / window.innerWidth ) * 2 - 1,
             - ( event.clientY / window.innerHeight ) * 2 + 1
         );
 
         pointersEffectsData.splice(0, 1);
-        pointersEffectsData.push(new THREE.Vector4(event.clientX / window.innerWidth, 1 - event.clientY / window.innerHeight, 0, 0))
+        pointersEffectsData.push(
+            new THREE.Vector4(
+                event.clientX / window.innerWidth,
+                1 - event.clientY / window.innerHeight, 
+                0, 
+                event.button === 2 ? 1 : 0))
         postProcessMaterial.uniforms.uPointer.value = pointersEffectsData;
         postProcessMaterial.uniforms.uPointer.needsUpdate = true;
 
@@ -843,7 +849,9 @@ function initInput() {
         raycaster.setFromCamera( mouseCoords, camera );
     
         // Creates a ball and throws it
-        const ballMass = 55;
+        // const ballMass = 55;
+        let ballMass = 110;
+        if(event.button == 2) ballMass = 1000;
         const ballRadius = 0.6;
     
         for(let i = 0; i < 3; i++) {

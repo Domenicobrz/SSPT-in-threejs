@@ -25,13 +25,31 @@ void main() {
     // pointer distortion
     float intref = 0.0;
 
+    // editable parameters
+    // float intensityMult  = 0.6;
+    // float spreadIntMult  = 0.02;
+    // float spreadRandMult = 0.01;
+    
+    float spreadIntMult = 0.02;
+    float spreadRandMult = 0.0;
+    // float brightnessMult = 1.1;
+
     for(int i = 0; i < 10; i++) {
         vec2  puv   = uPointer[i].xy;
-        float ptime = uPointer[i].z * 1.35;
+        float ptime = uPointer[i].z * 1.475;
+        
+        float intensityMult  = 0.2;
     
-        float dist  = length((vUv - puv) * vec2(uAspect, 1.0));
+        float dist        = length((vUv - puv) * vec2(uAspect, 1.0));
         float radTimeMult = 0.2;
-        float rad    = 0.3;  
+        float rad         = 0.3;  
+
+        if(uPointer[i].w > 0.5) {
+            intensityMult = 0.35;
+            rad = 0.51;
+            ptime = uPointer[i].z * 0.975;
+        }
+
         if(dist < rad && ptime < 1.0) {
             // float intensity = ptime < 0.5 ? ptime * 2.0 : (ptime - 0.5) * 2.0;
             float pyrTime = ptime < 0.5 ? 
@@ -57,7 +75,7 @@ void main() {
     
             t = sin(t * 6.28 * 2.0) * pt;
     
-            float intensity = t * 0.6;
+            float intensity = t * intensityMult;
     
             // at the end of the range we want it faded
             if(dist > rad - 0.05) {
@@ -75,8 +93,8 @@ void main() {
     float dist_from_hor_center = abs(uv.x - 0.5);
     float spread = 0.004 * dist_from_hor_center;
 
-    spread += intref * 0.02;
-    spread += (rand(uv) * 2.0 - 1.0) * intref * 0.01;
+    spread += intref * spreadIntMult;
+    spread += (rand(uv) * 2.0 - 1.0) * intref * spreadRandMult;
 
 
     // vec2 offs = normalize(uv - vec2(0.5)) * spread;
@@ -91,8 +109,10 @@ void main() {
     c2 *= vec4(0.0, 0.6, 0.0, 1.0);
     c3 *= vec4(0.0, 0.2, 1.0, 1.0);
 
+    vec4 fcol = c1 + c2 + c3;
+    // fcol *= (1.0 + brightnessMult * intref);
 
-    gl_FragColor = vec4(c1 + c2 + c3);
+    gl_FragColor = vec4(fcol);
 }
 `;
 
